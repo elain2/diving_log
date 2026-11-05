@@ -1,0 +1,202 @@
+---
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import PhotoCard from '../components/PhotoCard.astro';
+import DepthGauge from '../components/DepthGauge.astro';
+import YouTube from '../components/YouTube.astro';
+import { tilt, type Dive } from '../lib/dives';
+import { t, href, formatDate, type Lang } from '../lib/i18n';
+
+interface Props { lang: Lang; dive: Dive; prev?: Dive; next?: Dive }
+const { lang, dive, prev, next } = Astro.props;
+const d = dive.data;
+const { Content } = await render(dive.bodyEntry);
+
+const rows = [
+  [t(lang, 'date'), formatDate(d.date, lang)],
+  [t(lang, 'location'), dive.location],
+  [t(lang, 'type'), `${t(lang, d.type)} · ${t(lang, d.place)}`],
+  [t(lang, 'discipline'), d.discipline],
+  [t(lang, 'maxDepth'), d.maxDepth !== undefined ? `${d.maxDepth} m` : undefined],
+  [t(lang, 'time'), d.time],
+  [t(lang, 'water'), d.waterTemp !== undefined ? `${d.waterTemp} °C` : undefined],
+  [t(lang, 'vis'), d.visibility !== undefined ? `${d.visibility} m` : undefined],
+  [t(lang, 'buddy'), dive.buddy],
+] as const;
+
+const tapes = ['', 'teal', 'pink'] as const;
+const tapeSpots = ['top', 'corner-l', 'top', 'corner-r'] as const;
+const capFor = (i: number) => (i === 0 ? `${formatDate(d.date, lang, 'stamp')} · ${dive.title}` : undefined);
+---
+
+<Base lang={lang} path={`dives/${dive.id}`} title={dive.title} image={dive.cover?.src.src}>
+  <article class="wrap">
+    <a class="back hand" href={href(lang)}>{t(lang, 'back')}</a>
+
+    <div class="spread">
+      <!-- 왼쪽 페이지: 로그 양식 -->
+      <section class="page left" aria-label="log">
+        <header class="form-head">
+          <span class="type">DIVE No.</span>
+          <span class="form-no pen">{dive.no}</span>
+        </header>
+        <dl class="form">
+          {rows.map(([k, v]) => (
+            <div class="row">
+              <dt class="type">{k}</dt>
+              <dd class:list={['type', { blank: !v }]}>{v ?? ''}</dd>
+            </div>
+          ))}
+        </dl>
+        <div class="form-foot">
+          <DepthGauge depth={d.maxDepth} label={t(lang, 'maxDepth')} />
+          <span class="stamp thud date-stamp" style={`--tilt:${tilt(dive.id, 14).toFixed(1)}deg`}>
+            <span>
+              {d.place === 'sea' ? 'OPEN WATER' : 'POOL'}<br />
+              <b>{formatDate(d.date, lang, 'stamp')}</b><br />
+              {d.mood ?? (d.type === 'scuba' ? 'SCUBA' : 'FREE')}
+            </span>
+          </span>
+        </div>
+      </section>
+
+      <!-- 오른쪽 페이지: 글 -->
+      <section class="page right">
+        {d.draft && <span class="draft hand">✎ {t(lang, 'draft')}</span>}
+        <h1 class="title pen">{dive.title}</h1>
+        {lang === 'en' && !dive.hasEnglish && <p class="note hand">(written in Korean)</p>}
+        <div class="body ruled">
+          <Content />
+        </div>
+        {dive.cover && (
+          <div class="pinned">
+            <PhotoCard photo={dive.cover} alt={dive.title} tape="corner-r" tapeColor="teal" maxTilt={4} eager sizes="(max-width: 860px) 60vw, 260px" />
+          </div>
+        )}
+      </section>
+    </div>
+
+    {(dive.clips.length > 0 || d.youtube.length > 0) && (
+      <section class="media" aria-label={t(lang, 'videos')}>
+        {dive.clips.map((src, i) => (
+          <figure class="polaroid clip settle" style={`--tilt:${i % 2 ? 2 : -2}deg`}>
+            <span class="tape top pink" aria-hidden="true" />
+            <video src={src} autoplay muted loop playsinline preload="metadata" aria-label={t(lang, 'moving')} />
+            <figcaption>{t(lang, 'moving')}</figcaption>
+          </figure>
+        ))}
+        {d.youtube.map((id) => <YouTube id={id} label={dive.title} />)}
+      </section>
+    )}
+
+    {dive.photos.length > 0 && (
+      <section class="collage" aria-label={t(lang, 'gallery')}>
+        {dive.photos.map((p, i) => (
+          <PhotoCard
+            photo={p}
+            alt={`${dive.title} ${i + 1}`}
+            caption={capFor(i)}
+            tape={i % 3 === 1 ? false : tapeSpots[i % 4]}
+            tapeColor={tapes[i % 3]}
+            maxTilt={3.5}
+            eager={i < 2}
+            sizes="(max-width: 640px) 92vw, (max-width: 1000px) 46vw, 380px"
+          />
+        ))}
+      </section>
+    )}
+
+    <nav class="pager" aria-label="dives">
+      {prev ? (
+        <a href={href(lang, `dives/${prev.id}`)} class="tab prev">
+          <small class="type">← {t(lang, 'prev')}</small>
+          <span class="hand">{prev.title}</span>
+        </a>
+      ) : <span />}
+      {next && (
+        <a href={href(lang, `dives/${next.id}`)} class="tab next">
+          <small class="type">{t(lang, 'next')} →</small>
+          <span class="hand">{next.title}</span>
+        </a>
+      )}
+    </nav>
+  </article>
+</Base>
+
+<style>
+  .back { display: inline-block; font-size: 1.25rem; margin: 18px 0 20px; text-decoration: none; }
+  .back:hover { color: var(--red); }
+
+  /* 펼친 노트 두 쪽 */
+  .spread {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--card);
+    box-shadow: var(--shadow-lift);
+    border-radius: 4px;
+    position: relative;
+  }
+  .spread::after {
+    /* 가운데 접힌 부분 그림자 */
+    content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 60px; translate: -50% 0;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,.09) 48%, rgba(0,0,0,.15) 50%, rgba(0,0,0,.09) 52%, transparent);
+    pointer-events: none;
+  }
+  .page { padding: 40px 44px 44px; position: relative; min-width: 0; }
+
+  .form-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+  .form-head .type { letter-spacing: 0.2em; font-size: 0.85rem; }
+  .form-no { font-size: 3rem; line-height: 0.9; color: var(--red); }
+  .form { margin: 0; }
+  .row {
+    display: grid; grid-template-columns: 9.5em 1fr; gap: 10px;
+    border-bottom: 1px solid var(--rule); padding: 9px 0 5px;
+  }
+  dt { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); align-self: center; }
+  dd { margin: 0; font-size: 1.02rem; font-weight: 700; }
+  dd.blank::before { content: '—'; color: var(--rule); font-weight: 400; }
+  .form-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 22px; }
+  .date-stamp { width: 140px; font-size: 0.68rem; }
+  .date-stamp b { font-size: 0.95rem; }
+
+  .draft { position: absolute; top: 14px; right: 20px; background: var(--tape); padding: 0 12px; rotate: 6deg; }
+  .title { font-size: clamp(2.6rem, 5vw, 3.6rem); font-weight: 400; line-height: 1.05; margin: 8px 0 18px; }
+  .page.right { display: flex; flex-direction: column; }
+  .pinned { width: min(260px, 62%); margin: auto 0 0 auto; padding-top: 24px; }
+  .note { color: var(--ink-soft); margin: -10px 0 8px; }
+  .body { font-size: 1.05rem; }
+  .body :global(p) { margin: 0 0 2em; }
+  .body :global(strong) { background: linear-gradient(transparent 58%, var(--tape) 58%, var(--tape) 92%, transparent 92%); font-weight: inherit; }
+  .body :global(blockquote) { font-family: var(--hand); font-size: 1.4rem; margin: 0 0 2em; padding-left: 16px; border-left: 3px solid var(--red); }
+  .body :global(img) { margin: 0 auto 2em; padding: 8px; background: var(--card); box-shadow: var(--shadow); rotate: -1deg; }
+
+  /* 영상 */
+  .media { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 36px; margin-top: 60px; }
+  .clip { margin: 0; }
+
+  /* 사진 콜라주 */
+  .collage { columns: 3 300px; column-gap: 34px; margin-top: 64px; }
+  .collage :global(.polaroid) { break-inside: avoid; margin-bottom: 38px; }
+
+  .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 50px; }
+  .tab {
+    display: grid; gap: 2px; text-decoration: none; background: var(--card); box-shadow: var(--shadow);
+    padding: 12px 20px; max-width: 48%; border-top: 6px solid var(--teal);
+  }
+  .tab.next { text-align: right; border-top-color: var(--tape); }
+  .tab small { font-size: 0.72rem; letter-spacing: 0.1em; color: var(--ink-soft); }
+  .tab span { font-size: 1.3rem; }
+  .tab:hover { translate: 0 -3px; box-shadow: var(--shadow-lift); }
+
+  @media (max-width: 860px) {
+    .spread { grid-template-columns: 1fr; }
+    .spread::after { display: none; }
+    .page.left { border-bottom: 2px dashed var(--rule); }
+    .page { padding: 28px 22px 30px; }
+  }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 7.5em 1fr; }
+    .date-stamp { width: 118px; }
+    .collage { column-gap: 0; }
+  }
+</style>

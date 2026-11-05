@@ -1,0 +1,116 @@
+import type { ImageMetadata } from 'astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { t, type Lang } from './i18n';
+
+// dives/<폴더>/photos 안의 사진을 모두 찾아서 폴더별로 묶음
+const photoFiles = import.meta.glob<ImageMetadata>(
+  '/dives/*/photos/*.{jpg,jpeg,JPG,JPEG,png,PNG,webp,WEBP}',
+  { eager: true, import: 'default' },
+);
+const clipFiles = import.meta.glob<string>('/dives/*/clips/*.{mp4,MP4,webm,mov,MOV}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+export interface Photo {
+  src: ImageMetadata;
+  file: string;
+  isMe: boolean;
+}
+
+export interface Dive {
+  id: string;
+  no: number;
+  entry: CollectionEntry<'dives'>;
+  data: CollectionEntry<'dives'>['data'];
+  title: string;
+  location?: string;
+  buddy?: string;
+  /** 글을 렌더링할 항목 (영어 글이 있으면 영어) */
+  bodyEntry: CollectionEntry<'dives'> | CollectionEntry<'divesEn'>;
+  photos: Photo[];
+  clips: string[];
+  cover?: Photo;
+  hasEnglish: boolean;
+}
+
+const natural = new Intl.Collator('en', { numeric: true }).compare;
+const folderOf = (key: string) => key.split('/')[2];
+const fileOf = (key: string) => key.split('/').pop()!;
+// 파일 이름이 "-me" 로 끝나면 내가 나온 사진
+const isMeFile = (name: string) => /[-_]me(?:[-_]\d+)?\.[a-z]+$/i.test(name);
+
+function photosFor(id: string): Photo[] {
+  return Object.entries(photoFiles)
+    .filter(([k]) => folderOf(k) === id)
+    .map(([k, src]) => ({ src, file: fileOf(k), isMe: isMeFile(fileOf(k)) }))
+    .sort((a, b) => natural(a.file, b.file));
+}
+
+function clipsFor(id: string) {
+  return Object.entries(clipFiles)
+    .filter(([k]) => folderOf(k) === id)
+    .sort(([a], [b]) => natural(a, b))
+    .map(([, url]) => url);
+}
+
+let cache: Promise<{ entries: CollectionEntry<'dives'>[]; en: Map<string, CollectionEntry<'divesEn'>> }>;
+function load() {
+  cache ??= (async () => {
+    const entries = (await getCollection('dives')).sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
+    const en = new Map((await getCollection('divesEn')).map((e) => [e.id, e]));
+    return { entries, en };
+  })();
+  return cache;
+}
+
+/** 오래된 순으로 번호를 매긴 다이빙 목록 (반환은 최신순) */
+export async function getDives(lang: Lang): Promise<Dive[]> {
+  const { entries, en } = await load();
+  return entries
+    .map((entry, i) => {
+      const d = entry.data;
+      const english = lang === 'en' ? en.get(entry.id) : undefined;
+      const photos = photosFor(entry.id);
+      const location = english?.data.location ?? d.location;
+      const fallback = t(lang, d.place === 'pool' ? 'untitledPool' : 'untitledSea');
+      return {
+        id: entry.id,
+        no: i + 1,
+        entry,
+        data: d,
+        title: english?.data.title ?? d.title ?? location ?? fallback,
+        location,
+        buddy: english?.data.buddy ?? d.buddy,
+        bodyEntry: english?.body?.trim() ? english : entry,
+        photos,
+        clips: clipsFor(entry.id),
+        cover: photos.find((p) => p.file === d.cover) ?? photos[0],
+        hasEnglish: Boolean(english),
+      };
+    })
+    .reverse();
+}
+
+export function stats(dives: Dive[]) {
+  const depths = dives.map((d) => d.data.maxDepth).filter((n): n is number => typeof n === 'number');
+  return {
+    days: dives.length,
+    deepest: depths.length ? Math.max(...depths) : undefined,
+    sea: dives.filter((d) => d.data.place === 'sea').length,
+    pool: dives.filter((d) => d.data.place === 'pool').length,
+    photos: dives.reduce((n, d) => n + d.photos.length, 0),
+  };
+}
+
+/** 사진 기울기: 같은 사진은 항상 같은 각도 (새로고침해도 안 바뀜) */
+export function tilt(seed: string, max = 3) {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return ((Math.abs(h) % 1000) / 1000) * max * 2 - max;
+}
+
+export function monthKey(d: Date) {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}

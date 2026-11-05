@@ -1,0 +1,15 @@
+---
+import DiveDetail from '../../../views/DiveDetail.astro';
+import { getDives } from '../../../views/../lib/dives';
+
+export async function getStaticPaths() {
+  const dives = await getDives('en');
+  // dives는 최신순: 이전(prev) = 더 오래된 기록
+  return dives.map((dive, i) => ({
+    params: { slug: dive.id },
+    props: { dive, prev: dives[i + 1], next: dives[i - 1] },
+  }));
+}
+const { dive, prev, next } = Astro.props;
+---
+<DiveDetail lang="en" dive={dive} prev={prev} next={next} />

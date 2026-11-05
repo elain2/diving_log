@@ -1,0 +1,35 @@
+---
+// 누르기 전까지는 썸네일만 불러와서 페이지가 빠름
+interface Props { id: string; label: string }
+const { id, label } = Astro.props;
+---
+<div class="yt polaroid settle" style="--tilt:-1deg">
+  <span class="tape top teal" aria-hidden="true"></span>
+  <button type="button" class="yt-play" data-yt={id} aria-label={label}>
+    <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy" width="480" height="360" />
+    <span class="yt-btn" aria-hidden="true">▶</span>
+  </button>
+  <span class="cap">▶ {label}</span>
+</div>
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.yt-play').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const f = document.createElement('iframe');
+      f.src = `https://www.youtube-nocookie.com/embed/${btn.dataset.yt}?autoplay=1&rel=0`;
+      f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      f.allowFullscreen = true;
+      f.title = btn.getAttribute('aria-label') ?? 'video';
+      btn.replaceWith(f);
+    }),
+  );
+</script>
+<style>
+  .yt-play { position: relative; display: block; width: 100%; border: 0; padding: 0; cursor: pointer; aspect-ratio: 16/9; overflow: hidden; background: #000; }
+  .yt-play img { width: 100%; height: 100%; object-fit: cover; }
+  .yt :global(iframe) { width: 100%; aspect-ratio: 16/9; border: 0; display: block; }
+  .yt-btn {
+    position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--red); color: #fff; font-size: 1.5rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  }
+</style>

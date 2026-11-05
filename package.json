@@ -1,0 +1,16 @@
+{
+  "name": "diving-log",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "add": "node scripts/add-photos.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.18.2",
+    "exifr": "^7.1.3",
+    "sharp": "^0.35.5"
+  }
+}

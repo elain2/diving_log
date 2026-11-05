@@ -1,0 +1,302 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import PhotoCard from '../components/PhotoCard.astro';
+import { SITE } from '../../site.config.mjs';
+import { getDives, stats, tilt, monthKey } from '../lib/dives';
+import { t, href, formatDate, monthLabel, type Lang } from '../lib/i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const dives = await getDives(lang);
+const s = stats(dives);
+const first = dives.at(-1)?.data.date;
+
+// 표지 옆에 붙일 사진 3장: 사진이 많은 날의 대표 사진
+const featured = [...dives]
+  .filter((d) => d.cover)
+  .sort((a, b) => b.photos.length - a.photos.length)
+  .slice(0, 3);
+
+const months = new Map<string, typeof dives>();
+for (const d of dives) {
+  const k = monthKey(d.data.date);
+  months.set(k, [...(months.get(k) ?? []), d]);
+}
+
+const filters = [
+  { key: 'all', label: t(lang, 'all'), n: dives.length },
+  { key: 'sea', label: t(lang, 'sea'), n: s.sea },
+  { key: 'pool', label: t(lang, 'pool'), n: s.pool },
+  { key: 'freedive', label: t(lang, 'freedive'), n: dives.filter((d) => d.data.type === 'freedive').length },
+  { key: 'scuba', label: t(lang, 'scuba'), n: dives.filter((d) => d.data.type === 'scuba').length },
+].filter((f) => f.key === 'all' || f.n > 0);
+---
+
+<Base lang={lang} path="" image={featured[0]?.cover?.src.src}>
+  <section class="hero wrap">
+    <div class="cover tilt" aria-label="logbook cover">
+      <div class="cover-stitch">
+        <span class="cover-label type">DIVE LOG<br /><small>No. 01 · {first?.getUTCFullYear() ?? ''}</small></span>
+        <h1 class="cover-name pen">{SITE.name}</h1>
+        <p class="cover-sub hand">
+          {first && (lang === 'ko' ? `${formatDate(first, 'ko', 'stamp')}${t(lang, 'since')}` : `since ${formatDate(first, 'en', 'stamp')}${t(lang, 'since')}`)}
+        </p>
+        <svg class="cover-waves" viewBox="0 0 200 40" aria-hidden="true">
+          <path d="M0 10 q12.5 -10 25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0" />
+          <path d="M0 24 q12.5 -10 25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0" />
+          <path d="M0 38 q12.5 -10 25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0" />
+        </svg>
+      </div>
+      <span class="cover-band" aria-hidden="true"></span>
+    </div>
+
+    <div class="hero-photos">
+      {featured.map((d, i) => (
+        <a
+          href={href(lang, `dives/${d.id}`)}
+          class:list={['polaroid', 'hero-ph', `hp-${i}`]}
+          style={`--tilt:${[-6, 5, -2][i]}deg`}
+        >
+          <span class:list={['tape', i === 1 ? 'corner-r' : 'top', ['', 'teal', 'pink'][i]]} aria-hidden="true" />
+          <Image src={d.cover!.src} alt={d.title} widths={[360, 640]} sizes="(max-width: 640px) 60vw, 300px" format="webp" quality={78} loading="eager" />
+          <span class="cap">{formatDate(d.data.date, lang, 'stamp')} · {d.title}</span>
+        </a>
+      ))}
+    </div>
+
+    <div class="hero-stamps" aria-label="stats">
+      <span class="stamp thud" style="--tilt:-10deg;--delay:.3s"><span><b>{s.days}</b><br />{t(lang, 'diveDays')}</span></span>
+      {s.deepest !== undefined && (
+        <span class="stamp thud blue" style="--tilt:7deg;--delay:.55s"><span>{t(lang, 'deepest')}<br /><b>{s.deepest}m</b></span></span>
+      )}
+      <span class="stamp thud" style="--tilt:-4deg;--delay:.8s"><span><b>{s.photos}</b><br />{t(lang, 'photos')}</span></span>
+    </div>
+  </section>
+
+  <section class="log wrap" aria-labelledby="log-title">
+    <div class="log-head">
+      <h2 id="log-title" class="pen">{t(lang, 'log')}</h2>
+      <div class="chips" role="group" aria-label={t(lang, 'filter')}>
+        {filters.map((f, i) => (
+          <button type="button" class="chip" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
+            {f.label}<span class="n">{f.n}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {dives.length === 0 && <p class="hand empty">{t(lang, 'noneYet')}</p>}
+
+    {[...months].map(([key, list]) => {
+      const m = monthLabel(key, lang);
+      return (
+        <div class="month" data-month>
+          <h3 class="month-title">
+            <span class="pen">{m.big}</span>
+            <small class="type">{m.small}</small>
+          </h3>
+          <ol class="entries">
+            {list.map((d) => (
+              <li class="entry settle" data-place={d.data.place} data-type={d.data.type} style={`--tilt:${tilt(d.id, 2.5).toFixed(2)}deg`}>
+                <a href={href(lang, `dives/${d.id}`)} class="entry-link">
+                  <div class="entry-photo polaroid">
+                    <span class:list={['tape', 'top', d.data.place === 'pool' ? 'teal' : '']} aria-hidden="true" />
+                    {d.cover ? (
+                      <Image src={d.cover.src} alt="" widths={[360, 600]} sizes="(max-width: 640px) 80vw, 280px" format="webp" quality={74} />
+                    ) : (
+                      <div class="no-photo hand">~ ~ ~</div>
+                    )}
+                  </div>
+                  <div class="ticket">
+                    <span class="t-no type">No.{String(d.no).padStart(3, '0')}</span>
+                    <span class="t-date type">{formatDate(d.data.date, lang, 'stamp')}</span>
+                    <strong class="t-title hand">{d.title}</strong>
+                    {d.location && d.location !== d.title && <span class="t-loc">{d.location}</span>}
+                    <span class="t-meta">
+                      <span class:list={['t-place', d.data.place]}>{t(lang, d.data.place)}</span>
+                      <span>{d.data.discipline ?? t(lang, d.data.type)}</span>
+                    </span>
+                    <span class="t-depth type" aria-label={t(lang, 'maxDepth')}>
+                      {d.data.maxDepth !== undefined ? <>{d.data.maxDepth}<small>m</small></> : <span class="t-mood">{d.data.mood ?? '~'}</span>}
+                    </span>
+                    {d.data.draft && <span class="t-draft hand">✎ {t(lang, 'draft')}</span>}
+                    <span class="t-count type">{d.photos.length} ◫</span>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      );
+    })}
+  </section>
+</Base>
+
+<script>
+  const chips = document.querySelectorAll<HTMLButtonElement>('.chip[data-filter]');
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      const f = chip.dataset.filter!;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+      document.querySelectorAll<HTMLElement>('.entry').forEach((el) => {
+        el.hidden = f !== 'all' && el.dataset.place !== f && el.dataset.type !== f;
+      });
+      document.querySelectorAll<HTMLElement>('[data-month]').forEach((m) => {
+        m.hidden = !m.querySelector('.entry:not([hidden])');
+      });
+    }),
+  );
+</script>
+
+<style>
+  /* ───── 표지 ───── */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    grid-template-areas: 'cover photos' 'stamps photos';
+    gap: 28px 56px;
+    padding-block: 36px 40px;
+    align-items: start;
+  }
+  .cover {
+    grid-area: cover;
+    position: relative;
+    aspect-ratio: 3 / 4;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px),
+      var(--noise),
+      var(--cover);
+    color: var(--cover-ink);
+    border-radius: 6px 14px 14px 6px;
+    box-shadow: inset 10px 0 18px -10px rgba(0,0,0,.6), var(--shadow-lift);
+    padding: 18px;
+    rotate: -2deg;
+  }
+  .cover-stitch {
+    height: 100%;
+    border: 2px dashed color-mix(in srgb, var(--cover-ink) 45%, transparent);
+    border-radius: 4px 8px 8px 4px;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cover-label {
+    align-self: flex-start;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 14px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    border-radius: 2px;
+    box-shadow: 0 2px 0 rgba(0,0,0,.2);
+  }
+  .cover-label small { font-weight: 400; letter-spacing: 0.1em; font-size: 0.75rem; }
+  .cover-name { font-size: clamp(2.2rem, 7.5vw, 3.6rem); white-space: nowrap; line-height: 1; margin: auto 0 0; font-weight: 400; }
+  .cover-sub { margin: 0; font-size: 1.2rem; opacity: 0.85; }
+  .cover-waves { width: 70%; margin-top: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; opacity: 0.45; }
+  .cover-band {
+    position: absolute; top: -4px; bottom: -4px; right: 34px; width: 14px;
+    background: var(--red); border-radius: 3px;
+    box-shadow: 2px 0 4px rgba(0,0,0,.35);
+  }
+
+  .hero-photos { grid-area: photos; position: relative; min-height: 520px; }
+  .hero-ph { position: absolute; width: min(300px, 46%); }
+  .hp-0 { top: 0; left: 4%; }
+  .hp-1 { top: 70px; right: 0; width: min(270px, 42%); }
+  .hp-2 { top: 300px; left: 30%; width: min(280px, 44%); }
+  .hero-ph img { aspect-ratio: 4/5; object-fit: cover; }
+
+  .hero-stamps { grid-area: stamps; display: flex; gap: 14px; flex-wrap: wrap; }
+  .hero-stamps .stamp { width: 112px; font-size: 0.68rem; }
+  .hero-stamps b { font-size: 1.7rem; letter-spacing: 0; }
+
+  /* ───── 로그 목록 ───── */
+  .log-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 28px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 24px;
+  }
+  .log-head h2 { font-size: 3rem; font-weight: 400; margin: 0; line-height: 1; }
+  .empty { font-size: 1.4rem; text-align: center; padding: 60px 0; }
+
+  .month { margin-top: 40px; }
+  .month-title { display: flex; align-items: baseline; gap: 12px; margin: 0 0 18px; font-weight: 400; }
+  .month-title .pen { font-size: 2.6rem; line-height: 1; color: var(--red); }
+  .month-title small { color: var(--ink-soft); font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  .entries {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 44px 36px;
+  }
+  .entry { rotate: var(--tilt); }
+  .entry:nth-child(3n + 2) { margin-top: 26px; }
+  .entry-link {
+    display: grid; grid-template-columns: 44% 1fr; align-items: center;
+    text-decoration: none;
+  }
+  .entry-photo { rotate: -4deg; z-index: 1; padding-bottom: 26px; margin-right: -14px; }
+  .entry-photo img { aspect-ratio: 4/5; object-fit: cover; }
+  .no-photo { aspect-ratio: 4/5; display: grid; place-items: center; background: var(--paper-2); font-size: 1.6rem; }
+  .entry-link:hover .entry-photo { rotate: -1deg; translate: -4px -6px; box-shadow: var(--shadow-lift); }
+
+  /* 입장권 모양 로그 카드 (왼쪽에 구멍 뚫린 절취선) */
+  .ticket {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 8px;
+    padding: 14px 14px 14px 30px;
+    background:
+      radial-gradient(circle at 0 50%, transparent 9px, var(--card) 9.5px) left / 100% 100% no-repeat;
+    box-shadow: var(--shadow);
+    min-height: 200px;
+    align-content: start;
+  }
+  .ticket::before {
+    content: ''; position: absolute; left: 16px; top: 10px; bottom: 10px;
+    border-left: 2px dotted var(--rule);
+  }
+  .t-no { grid-column: 1; font-size: 0.75rem; color: var(--ink-soft); letter-spacing: 0.1em; }
+  .t-date { grid-column: 2; font-size: 0.75rem; color: var(--red); justify-self: end; }
+  .t-title { grid-column: 1 / -1; font-size: 1.55rem; line-height: 1.15; margin-top: 6px; font-weight: 700; }
+  .t-loc { grid-column: 1 / -1; font-size: 0.85rem; color: var(--ink-soft); }
+  .t-meta { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.75rem; margin-top: 8px; }
+  .t-meta span { border: 1px solid var(--rule); border-radius: 999px; padding: 0 8px; }
+  .t-place.sea { background: color-mix(in srgb, var(--sea) 15%, transparent); }
+  .t-place.pool { background: color-mix(in srgb, var(--teal) 25%, transparent); }
+  .t-depth { grid-column: 1; align-self: end; font-size: 2.6rem; font-weight: 700; line-height: 1; margin-top: 12px; color: var(--sea); }
+  .t-depth small { font-size: 0.45em; margin-left: 2px; }
+  .t-mood { font-size: 1.8rem; }
+  .t-count { grid-column: 2; align-self: end; justify-self: end; font-size: 0.75rem; color: var(--ink-soft); }
+  .t-draft {
+    position: absolute; top: -12px; right: -8px; rotate: 8deg;
+    background: var(--tape); padding: 0 10px; font-size: 1rem; color: var(--ink);
+  }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; grid-template-areas: 'cover' 'stamps' 'photos'; }
+    .cover { max-width: 360px; width: 86%; margin-inline: auto; aspect-ratio: auto; min-height: 340px; }
+    .hero-stamps { justify-content: center; }
+    .hero-photos { min-height: 0; display: flex; gap: 0; justify-content: center; padding-top: 10px; }
+    .hero-ph, .hp-1, .hp-2 { position: relative; inset: auto; width: 38%; }
+    .hp-1 { margin-left: -6%; margin-top: 30px; z-index: 2; }
+    .hp-2 { margin-left: -6%; }
+    .hero-ph .cap { display: none; }
+  }
+  @media (max-width: 640px) {
+    .hero { padding-top: 20px; }
+    .hero-stamps .stamp { width: 96px; }
+    .log-head h2 { font-size: 2.4rem; }
+    .entry:nth-child(3n + 2) { margin-top: 0; }
+    .entries { gap: 34px; }
+    .entry-link { grid-template-columns: 42% 1fr; }
+    .ticket { min-height: 180px; }
+    .t-title { font-size: 1.35rem; }
+  }
+</style>

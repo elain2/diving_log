@@ -1,0 +1,79 @@
+---
+import Base from '../layouts/Base.astro';
+import PhotoCard from '../components/PhotoCard.astro';
+import { getDives } from '../lib/dives';
+import { t, href, formatDate, type Lang } from '../lib/i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const dives = await getDives(lang);
+const all = dives.flatMap((d) =>
+  d.photos.map((p, i) => ({ p, d, i, caption: `${formatDate(d.data.date, lang, 'stamp')} · ${d.title}` })),
+);
+const count = (f: string) => all.filter((x) => (f === 'me' ? x.p.isMe : x.d.data.place === f)).length;
+const filters = [
+  { key: 'all', n: all.length },
+  { key: 'sea', n: count('sea') },
+  { key: 'pool', n: count('pool') },
+  { key: 'me', n: count('me') },
+] as const;
+const tapes = ['', 'teal', 'pink'] as const;
+---
+<Base lang={lang} path="gallery" title={t(lang, 'gallery')}>
+  <section class="wrap">
+    <div class="head">
+      <h1 class="pen">{t(lang, 'gallery')}</h1>
+      <p class="hand sub">{all.length} {t(lang, 'photos')} · {dives.length} {t(lang, 'dives')}</p>
+      <div class="chips" role="group" aria-label={t(lang, 'filter')}>
+        {filters.filter((f) => f.key === 'all' || f.n > 0).map((f, i) => (
+          <button type="button" class="chip" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
+            {t(lang, f.key)}<span class="n">{f.n}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+    <div class="wall">
+      {all.map(({ p, d, i, caption }, n) => (
+        <div class="cell" data-place={d.data.place} data-me={p.isMe ? '1' : undefined}>
+          <PhotoCard
+            photo={p}
+            alt={`${d.title} ${i + 1}`}
+            caption={caption}
+            tape={n % 4 === 0 ? 'top' : n % 4 === 2 ? 'corner-l' : false}
+            tapeColor={tapes[n % 3]}
+            maxTilt={2.5}
+            eager={n < 4}
+            sizes="(max-width: 640px) 46vw, (max-width: 1000px) 30vw, 260px"
+          />
+          {i === 0 && <a class="go hand" href={href(lang, `dives/${d.id}`)}>→ No.{d.no}</a>}
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>
+<script>
+  const chips = document.querySelectorAll<HTMLButtonElement>('.chip[data-filter]');
+  chips.forEach((chip) => chip.addEventListener('click', () => {
+    const f = chip.dataset.filter!;
+    chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+    document.querySelectorAll<HTMLElement>('.cell').forEach((el) => {
+      el.hidden = f === 'all' ? false : f === 'me' ? !el.dataset.me : el.dataset.place !== f;
+    });
+  }));
+</script>
+<style>
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin: 26px 0 34px; border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+  h1 { font-size: 3.2rem; font-weight: 400; margin: 0; line-height: 1; }
+  .sub { margin: 0; color: var(--ink-soft); font-size: 1.2rem; margin-right: auto; }
+  .wall { columns: 4 220px; column-gap: 26px; }
+  .cell { break-inside: avoid; margin-bottom: 30px; position: relative; }
+  .cell :global(.cap) { font-size: 0.95rem; min-height: 0; }
+  .go { position: absolute; right: -4px; bottom: -14px; z-index: 4; background: var(--tape); padding: 0 8px; rotate: -4deg; text-decoration: none; font-size: 1rem; }
+  @media (max-width: 640px) {
+    .wall { columns: 2; column-gap: 14px; }
+    .cell { margin-bottom: 22px; }
+    .cell :global(.polaroid) { padding: 6px 6px 0; }
+    .cell :global(.cap) { font-size: 0.8rem; padding: 4px 2px 8px; }
+    h1 { font-size: 2.6rem; }
+  }
+</style>

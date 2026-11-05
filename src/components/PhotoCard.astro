@@ -1,0 +1,41 @@
+---
+// 누르면 크게 보이는 폴라로이드 사진
+import { Image, getImage } from 'astro:assets';
+import type { Photo } from '../lib/dives';
+import { tilt } from '../lib/dives';
+
+interface Props {
+  photo: Photo;
+  caption?: string;
+  alt: string;
+  sizes?: string;
+  tape?: 'top' | 'corner-l' | 'corner-r' | false;
+  tapeColor?: '' | 'teal' | 'pink';
+  maxTilt?: number;
+  eager?: boolean;
+  class?: string;
+}
+const { photo, caption, alt, sizes = '(max-width: 640px) 90vw, 360px', tape = 'top', tapeColor = '', maxTilt = 3, eager = false } = Astro.props;
+const full = await getImage({ src: photo.src, width: Math.min(1800, photo.src.width), format: 'webp', quality: 82 });
+const deg = tilt(photo.file, maxTilt);
+---
+<button
+  type="button"
+  class:list={['polaroid', 'settle', Astro.props.class]}
+  style={`--tilt:${deg.toFixed(2)}deg`}
+  data-full={full.src}
+  data-alt={alt}
+  data-caption={caption}
+>
+  {tape && <span class:list={['tape', tape, tapeColor]} aria-hidden="true" />}
+  <Image
+    src={photo.src}
+    alt={alt}
+    widths={[400, 700, 1000]}
+    sizes={sizes}
+    format="webp"
+    quality={78}
+    loading={eager ? 'eager' : 'lazy'}
+  />
+  {caption && <span class="cap">{caption}</span>}
+</button>
