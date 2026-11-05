@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// 사진/영상을 다이빙 폴더에 넣어주는 스크립트.
+// 사진/영상을 사이트에 넣어주는 스크립트.
 //
-//   npm run add -- "<사진 폴더>"                 → 촬영 날짜별로 dives/<날짜>/ 에 자동 분류
-//   npm run add -- "<사진 폴더>" --into 2026-08-20-울릉도   → 지정한 폴더 하나에 모두 넣기
+//   npm run add -- "<사진 폴더>"                          → 촬영 날짜별로 dives/<날짜>/ 에 자동 분류
+//   npm run add -- "<사진 폴더>" --into 2026-08-20-울릉도  → 지정한 다이빙 폴더 하나에 모두 넣기
+//   npm run add -- "<사진 폴더>" --daily                  → 다이빙이 아닌 일상 사진: daily/<날짜>/ 에 넣기
+//   npm run add -- "<사진 폴더>" --daily --into 2026-10-31-여행
 //
 // - 사진은 긴 변 2000px JPG로 줄이고, 위치(GPS) 같은 메타데이터는 지움
-// - 이미 들어있는 것과 같은 사진(내용 기준)은 건너뜀
+// - 한 번 넣은 원본 파일은 기억해 두고(scripts/imported.json) 다시 넣지 않음.
+//   그래서 사이트에서 지우거나 다른 폴더로 옮긴 사진도 되살아나지 않음
 // - 영상(.mp4/.mov)은 ffmpeg가 있으면 720p 무음 루프 클립으로 줄여 clips/ 에 넣음
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
@@ -18,6 +22,8 @@ import exifr from 'exifr';
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const DIVES = path.join(ROOT, 'dives');
+const DAILY = path.join(ROOT, 'daily');
+const MANIFEST = path.join(ROOT, 'scripts', 'imported.json');
 const PHOTO_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.tif', '.tiff']);
 const VIDEO_EXT = new Set(['.mp4', '.mov', '.m4v']);
 const MAX_SIDE = 2000;
@@ -26,11 +32,13 @@ const CLIP_SECONDS = 20;
 function parseArgs(argv) {
   const sources = [];
   let into = null;
+  let daily = false;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--into') into = argv[++i];
+    else if (argv[i] === '--daily') daily = true;
     else sources.push(argv[i]);
   }
-  return { sources, into };
+  return { sources, into, daily };
 }
 
 async function listFiles(dir) {
@@ -44,20 +52,22 @@ async function listFiles(dir) {
   return out;
 }
 
-// 16x16 흑백 평균 해시: 크기·압축이 달라도 같은 사진이면 거의 같은 값
-async function photoHash(file) {
-  const px = await sharp(file).rotate().resize(16, 16, { fit: 'fill' }).grayscale().raw().toBuffer();
-  const avg = px.reduce((a, b) => a + b, 0) / px.length;
-  return Array.from(px, (v) => (v > avg ? '1' : '0')).join('');
+// 원본 파일 내용의 지문. 같은 파일이면 이름·위치가 달라도 같은 값
+async function fingerprint(file) {
+  return crypto.createHash('sha1').update(await fs.readFile(file)).digest('hex');
 }
 
-function hamming(a, b) {
-  let d = 0;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
-  return d;
+async function loadManifest() {
+  try {
+    return new Set(JSON.parse(await fs.readFile(MANIFEST, 'utf8')));
+  } catch {
+    return new Set();
+  }
 }
 
-const isDuplicate = (hash, known) => known.some((h) => hamming(h, hash) <= 6);
+async function saveManifest(seen) {
+  await fs.writeFile(MANIFEST, JSON.stringify([...seen].sort(), null, 0) + '\n');
+}
 
 async function shotDate(file) {
   try {
@@ -94,7 +104,13 @@ draft: true          # 다 채우면 지우거나 false로 (true인 동안 사�
 오늘의 기록.
 `;
 
-async function ensureDive(folder, date) {
+// 다이빙은 dives/<폴더>/photos/, 일상은 daily/<폴더>/ 에 사진이 들어감
+async function targetDir(folder, date, daily) {
+  if (daily) {
+    const dir = path.join(DAILY, folder);
+    await fs.mkdir(dir, { recursive: true });
+    return { dir, photosDir: dir };
+  }
   const dir = path.join(DIVES, folder);
   await fs.mkdir(path.join(dir, 'photos'), { recursive: true });
   const md = path.join(dir, 'index.md');
@@ -102,46 +118,27 @@ async function ensureDive(folder, date) {
     await fs.access(md);
   } catch {
     await fs.writeFile(md, TEMPLATE(date));
-    console.log(`  + 새 기록 ${folder}/index.md`);
+    console.log(`  + 새 기록 dives/${folder}/index.md`);
   }
-  return dir;
+  return { dir, photosDir: path.join(dir, 'photos') };
 }
 
-async function existingHashes(photosDir) {
-  const hashes = [];
-  const names = new Set();
-  for (const f of await fs.readdir(photosDir).catch(() => [])) {
-    if (!PHOTO_EXT.has(path.extname(f).toLowerCase())) continue;
-    names.add(f.toLowerCase());
-    hashes.push(await photoHash(path.join(photosDir, f)));
-  }
-  return { hashes, names };
-}
-
-function freeName(base, names) {
-  const ext = '.jpg';
-  let name = `${base}${ext}`;
-  for (let i = 2; names.has(name.toLowerCase()); i++) name = `${base}_${i}${ext}`;
-  names.add(name.toLowerCase());
+async function freeName(photosDir, base) {
+  const taken = new Set((await fs.readdir(photosDir)).map((f) => f.toLowerCase()));
+  let name = `${base}.jpg`;
+  for (let i = 2; taken.has(name.toLowerCase()); i++) name = `${base}_${i}.jpg`;
   return name;
 }
 
-async function addPhoto(file, dir, cache) {
-  const photosDir = path.join(dir, 'photos');
-  if (!cache.has(photosDir)) cache.set(photosDir, await existingHashes(photosDir));
-  const known = cache.get(photosDir);
-  const hash = await photoHash(file);
-  if (isDuplicate(hash, known.hashes)) return 'dup';
-  const name = freeName(path.parse(file).name, known.names);
-  // sharp는 기본적으로 메타데이터(GPS 포함)를 저장하지 않음. 색 프로필만 sRGB로 유지
+async function addPhoto(file, photosDir) {
+  const name = await freeName(photosDir, path.parse(file).name);
+  // sharp는 기본적으로 메타데이터(GPS 포함)를 저장하지 않음. 색은 sRGB로 맞춤
   await sharp(file)
     .rotate()
     .resize(MAX_SIDE, MAX_SIDE, { fit: 'inside', withoutEnlargement: true })
     .toColorspace('srgb')
     .jpeg({ quality: 82, mozjpeg: true })
     .toFile(path.join(photosDir, name));
-  known.hashes.push(hash);
-  return name;
 }
 
 async function hasFfmpeg() {
@@ -164,53 +161,72 @@ async function addVideo(file, dir) {
       '-movflags', '+faststart', '-map_metadata', '-1', out,
     ]);
     console.log(`  🎞  ${path.basename(out)} (앞 ${CLIP_SECONDS}초, 무음 클립)`);
-    console.log(`     긴 영상은 유튜브(일부공개)에 올리고 index.md 의 youtube: 에 ID를 적어주세요.`);
-  } else {
-    const { size } = await fs.stat(file);
-    if (size > 20 * 1024 * 1024) {
-      console.log(`  ! ${path.basename(file)} 은 20MB가 넘어요. 유튜브에 올리는 걸 추천해요.`);
-      return;
-    }
-    await fs.copyFile(file, out);
+    console.log('     긴 영상은 유튜브(일부공개)에 올리고 index.md 의 youtube: 에 ID를 적어주세요.');
+    return true;
   }
+  const { size } = await fs.stat(file);
+  if (size > 20 * 1024 * 1024) {
+    console.log(`  ! ${path.basename(file)} 은 20MB가 넘어요. 유튜브에 올리는 걸 추천해요.`);
+    return false;
+  }
+  await fs.copyFile(file, out);
+  return true;
 }
 
 async function main() {
-  const { sources, into } = parseArgs(process.argv.slice(2));
+  const { sources, into, daily } = parseArgs(process.argv.slice(2));
   if (!sources.length) {
-    console.log('사용법: npm run add -- "<사진 폴더>" [--into <다이빙 폴더 이름>]');
+    console.log('사용법: npm run add -- "<사진 폴더>" [--daily] [--into <폴더 이름>]');
     process.exit(1);
   }
 
   const files = [];
   for (const src of sources) files.push(...(await listFiles(path.resolve(src))));
-  const cache = new Map();
-  let added = 0;
-  let dups = 0;
+  const media = files.filter((f) => {
+    const ext = path.extname(f).toLowerCase();
+    return PHOTO_EXT.has(ext) || VIDEO_EXT.has(ext);
+  });
+
+  const seen = await loadManifest();
+  const fresh = [];
+  for (const f of media) {
+    const id = await fingerprint(f);
+    if (seen.has(id)) continue;
+    seen.add(id); // 같은 파일이 두 폴더에 있어도 한 번만
+    fresh.push({ f, id });
+  }
+  const skipped = media.length - fresh.length;
 
   // 날짜 순으로 처리해서 결과가 보기 좋게
-  const dated = await Promise.all(files.map(async (f) => ({ f, d: await shotDate(f) })));
+  const dated = await Promise.all(fresh.map(async (x) => ({ ...x, d: await shotDate(x.f) })));
   dated.sort((a, b) => a.d - b.d);
 
-  for (const { f, d } of dated) {
-    const ext = path.extname(f).toLowerCase();
-    if (!PHOTO_EXT.has(ext) && !VIDEO_EXT.has(ext)) continue;
+  let added = 0;
+  for (const { f, id, d } of dated) {
     const date = ymd(d);
-    const dir = await ensureDive(into ?? date, date);
+    const isVideo = VIDEO_EXT.has(path.extname(f).toLowerCase());
     try {
-      if (VIDEO_EXT.has(ext)) {
-        await addVideo(f, dir);
-        added++;
+      if (isVideo && daily) {
+        console.log(`  - ${path.basename(f)}: 일상 폴더에는 영상을 넣지 않아요`);
+        seen.delete(id);
         continue;
       }
-      const result = await addPhoto(f, dir, cache);
-      if (result === 'dup') dups++;
-      else added++;
+      const { dir, photosDir } = await targetDir(into ?? date, date, daily);
+      if (isVideo) {
+        if (await addVideo(f, dir)) added++;
+        else seen.delete(id);
+      } else {
+        await addPhoto(f, photosDir);
+        added++;
+      }
     } catch (err) {
+      seen.delete(id); // 실패한 건 다음에 다시 시도할 수 있게
       console.log(`  ! ${path.basename(f)} 처리 실패: ${err.message}`);
     }
   }
-  console.log(`\n완료: ${added}개 추가, 중복 ${dups}개 건너뜀`);
+
+  await saveManifest(seen);
+  console.log(`\n완료: ${added}개 추가, 이미 넣은 파일 ${skipped}개 건너뜀`);
 }
 
 main();

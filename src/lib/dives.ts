@@ -16,7 +16,10 @@ const clipFiles = import.meta.glob<string>('/dives/*/clips/*.{mp4,MP4,webm,mov,M
 export interface Photo {
   src: ImageMetadata;
   file: string;
+  /** 파일 이름에 -me : 내가 나온 사진 */
   isMe: boolean;
+  /** 파일 이름에 -pick : 고른 컷 (사진 페이지에 빨간 동그라미) */
+  isPick: boolean;
 }
 
 export interface Dive {
@@ -38,14 +41,19 @@ export interface Dive {
 const natural = new Intl.Collator('en', { numeric: true }).compare;
 const folderOf = (key: string) => key.split('/')[2];
 const fileOf = (key: string) => key.split('/').pop()!;
-// 파일 이름이 "-me" 로 끝나면 내가 나온 사진
-const isMeFile = (name: string) => /[-_]me(?:[-_]\d+)?\.[a-z]+$/i.test(name);
+// 파일 이름 속 표시: YOUNG-12-me.jpg, YOUNG-12-pick.jpg, YOUNG-12-me-pick.jpg
+const tokensOf = (name: string) => name.replace(/\.[a-z0-9]+$/i, '').toLowerCase().split(/[-_ ]/);
+export function toPhoto(src: ImageMetadata, file: string): Photo {
+  const tokens = tokensOf(file);
+  return { src, file, isMe: tokens.includes('me'), isPick: tokens.includes('pick') };
+}
+export const byName = (a: Photo, b: Photo) => natural(a.file, b.file);
 
 function photosFor(id: string): Photo[] {
   return Object.entries(photoFiles)
     .filter(([k]) => folderOf(k) === id)
-    .map(([k, src]) => ({ src, file: fileOf(k), isMe: isMeFile(fileOf(k)) }))
-    .sort((a, b) => natural(a.file, b.file));
+    .map(([k, src]) => toPhoto(src, fileOf(k)))
+    .sort(byName);
 }
 
 function clipsFor(id: string) {

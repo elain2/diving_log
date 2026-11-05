@@ -40,6 +40,12 @@ const dict = {
     dives: '번의 다이빙',
     moving: '움직이는 사진',
     videos: '영상',
+    picks: '고른 컷',
+    diving: '다이빙',
+    daily: '일상',
+    frames: '컷',
+    seeLog: '그날의 로그 →',
+    sheetSub: '현상소에서 막 찾아온 밀착 인화지',
   },
   en: {
     log: 'Logbook',
@@ -80,6 +86,12 @@ const dict = {
     dives: 'dives',
     moving: 'Moving pictures',
     videos: 'Videos',
+    picks: 'Picks',
+    diving: 'Diving',
+    daily: 'Everyday',
+    frames: 'frames',
+    seeLog: 'Read the log →',
+    sheetSub: 'Contact sheets, fresh from the lab',
   },
 } as const;
 
