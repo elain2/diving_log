@@ -1,0 +1,41 @@
+---
+// 인스타그램식 3열 격자. 누르면 자르지 않은 원래 사진을 크게 보여줌
+import { Image, getImage } from 'astro:assets';
+import type { Photo } from '../lib/dives';
+
+interface Props {
+  photos: Photo[];
+  title: string;
+  /** 크게 보기 아래 글 (예: "2026.08.15 · 울릉도") */
+  caption?: string;
+  /** 필터용 표시 (사진 페이지) */
+  kind?: 'diving' | 'daily';
+  eagerCount?: number;
+}
+const { photos, title, caption, kind, eagerCount = 0 } = Astro.props;
+const fullSrc = await Promise.all(
+  photos.map(async (p) => (await getImage({ src: p.src, width: Math.min(1800, p.src.width), format: 'webp', quality: 82 })).src),
+);
+---
+<ul class="grid3 pg">
+  {photos.map((p, i) => (
+    <li class="rise" data-kind={kind} data-pick={p.isPick ? '1' : undefined} data-me={p.isMe ? '1' : undefined}>
+      <button
+        type="button"
+        class="tile"
+        data-full={fullSrc[i]}
+        data-alt={`${title} ${i + 1}`}
+        data-caption={[title, caption].filter(Boolean).join(' · ')}
+      >
+        <Image src={p.src} alt={`${title} ${i + 1}`} widths={[360, 720]} sizes="(max-width: 760px) 33vw, 300px" format="webp" quality={76} loading={i < eagerCount ? 'eager' : 'lazy'} />
+        {p.isPick && <span class="pick" aria-label="pick">✦</span>}
+      </button>
+    </li>
+  ))}
+</ul>
+<style>
+  .pg { list-style: none; margin: 0; padding: 0; }
+  .pg li[hidden] { display: none; }
+  .pg .tile { width: 100%; cursor: zoom-in; }
+  .pick { position: absolute; top: 8px; right: 10px; color: #fff; font-size: 0.9rem; text-shadow: 0 0 4px rgba(0,0,0,.5); }
+</style>

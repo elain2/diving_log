@@ -84,7 +84,8 @@ const ymd = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const TEMPLATE = (date) => `---
-title: ""            # 제목 (비워두면 장소 이름으로 표시)
+title: ""            # 제목 (세로로 크게 나옴. 비워두면 장소 이름으로 표시)
+# deck: ""           # 한 줄 소개 (글 위에 굵게)
 date: ${date}
 location: ""         # 장소 예: 제주 서귀포 / 딥스테이션
 type: freedive       # freedive(프리다이빙) | scuba(스쿠버)
@@ -97,7 +98,6 @@ maxDepth:            # 최대 수심 (m, 숫자만)
 # discipline: CWT    # 프리다이빙 종목 (CWT, FIM, CNF, STA, DYN ...)
 # cover: 사진파일.jpg  # 대표 사진 (생략하면 첫 사진)
 # youtube: [영상ID]   # 유튜브 영상 (주소의 v= 뒤 11글자)
-# mood: 🐟           # 스탬프에 찍힐 이모지 하나
 draft: true          # 다 채우면 지우거나 false로 (true인 동안 사이트에 '작성 중' 표시)
 ---
 

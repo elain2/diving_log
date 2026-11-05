@@ -19,6 +19,7 @@ const dives = defineCollection({
   loader: glob({ base: './dives', pattern: '*/index.md', generateId: folderId }),
   schema: z.object({
     title: optStr,
+    deck: optStr, // 부제 (제목 아래 한두 줄)
     date: z.coerce.date(),
     location: optStr,
     type: z.enum(['freedive', 'scuba']).default('freedive'),
@@ -41,6 +42,7 @@ const divesEn = defineCollection({
   loader: glob({ base: './dives', pattern: '*/index.en.md', generateId: folderId }),
   schema: z.object({
     title: optStr,
+    deck: optStr,
     location: optStr,
     buddy: optStr,
   }),
@@ -60,6 +62,7 @@ const about = defineCollection({
       .array(z.object({ name: z.string(), org: optStr, date: optStr }))
       .default([]),
     favorites: strList,
+    gear: strList, // 카메라·장비
   }),
 });
 

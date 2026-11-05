@@ -35,6 +35,9 @@ export interface Dive {
   photos: Photo[];
   clips: string[];
   cover?: Photo;
+  /** 대표 사진 파일 경로 (강조색 뽑을 때 씀) */
+  coverPath?: string;
+  deck?: string;
   hasEnglish: boolean;
 }
 
@@ -83,6 +86,7 @@ export async function getDives(lang: Lang): Promise<Dive[]> {
       const photos = photosFor(entry.id);
       const location = english?.data.location ?? d.location;
       const fallback = t(lang, d.place === 'pool' ? 'untitledPool' : 'untitledSea');
+      const cover = photos.find((p) => p.file === d.cover) ?? photos[0];
       return {
         id: entry.id,
         no: i + 1,
@@ -94,7 +98,9 @@ export async function getDives(lang: Lang): Promise<Dive[]> {
         bodyEntry: english?.body?.trim() ? english : entry,
         photos,
         clips: clipsFor(entry.id),
-        cover: photos.find((p) => p.file === d.cover) ?? photos[0],
+        cover,
+        coverPath: cover ? `dives/${entry.id}/photos/${cover.file}` : undefined,
+        deck: english?.data.deck ?? d.deck,
         hasEnglish: Boolean(english),
       };
     })

@@ -1,47 +1,28 @@
-/* ───────── 색 · 글꼴 ───────── */
+/* ───────── 색 · 글꼴 ─────────
+   좋아하는 영상의 색감: 뿌연 민트 회청색 지면, 남색 굵은 명조, 청록 포인트, 초록빛 회색 그림자 */
 :root {
-  --paper: #f4ede0;
-  --paper-2: #ebe1cd;
-  --card: #fffdf8;
-  --ink: #1b2a4a;
-  --ink-soft: #55617d;
-  --rule: rgba(27, 42, 74, 0.12);
-  --red: #d2463a;
-  --sea: #1f6f8b;
-  --teal: #7cc6be;
-  --tape: rgba(242, 210, 122, 0.78);
-  --tape-teal: rgba(124, 198, 190, 0.7);
-  --tape-pink: rgba(240, 168, 160, 0.72);
-  --cover: #1b2a4a;
-  --cover-ink: #f4ede0;
-  --shadow: 0 1px 1px rgba(40, 30, 10, 0.08), 0 6px 14px -6px rgba(40, 30, 10, 0.35);
-  --shadow-lift: 0 2px 2px rgba(40, 30, 10, 0.08), 0 18px 30px -12px rgba(40, 30, 10, 0.45);
-  --hand: 'Gaegu', 'Nanum Pen Script', cursive;
-  --pen: 'Nanum Pen Script', 'Gaegu', cursive;
-  --body: 'Gowun Dodum', system-ui, sans-serif;
-  --type: 'Courier Prime', ui-monospace, monospace;
-  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .18 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper: #e4edeb;      /* 민트 회청색 안개 */
+  --paper-2: #d0e1e0;
+  --ink: #0c314d;        /* 남색 */
+  --ink-2: #384845;      /* 초록빛 회색 */
+  --mute: #6f7d79;
+  --teal: #4f9a9c;
+  --rule: rgba(12, 49, 77, 0.14);
+  --mincho: 'Nanum Myeongjo', 'Shippori Mincho', serif;
+  --mincho-latin: 'Shippori Mincho', 'Nanum Myeongjo', serif;
+  --sans: 'Pretendard Variable', Pretendard, system-ui, -apple-system, sans-serif;
+  --gap: 4px;
   color-scheme: light;
 }
 
-/* 밤 다이빙 모드: 종이가 깊은 바다색으로 */
 :root[data-theme='night'] {
-  --paper: #0d1828;
-  --paper-2: #13223a;
-  --card: #182a45;
-  --ink: #ece4d3;
-  --ink-soft: #9fb0c8;
-  --rule: rgba(236, 228, 211, 0.1);
-  --red: #ff7a6b;
-  --sea: #7cc6be;
-  --tape: rgba(242, 210, 122, 0.45);
-  --tape-teal: rgba(124, 198, 190, 0.4);
-  --tape-pink: rgba(240, 168, 160, 0.4);
-  --cover: #e9dfcb;
-  --cover-ink: #1b2a4a;
-  --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 8px 18px -6px rgba(0, 0, 0, 0.7);
-  --shadow-lift: 0 2px 2px rgba(0, 0, 0, 0.3), 0 22px 34px -12px rgba(0, 0, 0, 0.8);
-  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .9 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper: #111615;
+  --paper-2: #1b2321;
+  --ink: #d0e5e5;
+  --ink-2: #9fb8b4;
+  --mute: #77928c;
+  --teal: #6fb3b4;
+  --rule: rgba(208, 229, 229, 0.12);
   color-scheme: dark;
 }
 
@@ -51,142 +32,82 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--noise), var(--paper);
+  background: var(--paper);
   color: var(--ink);
-  font-family: var(--body);
-  font-size: 17px;
+  font-family: var(--sans);
+  font-size: 15px;
   line-height: 1.75;
   word-break: keep-all;
   overflow-wrap: break-word;
-  transition: background-color 0.4s, color 0.4s;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.5s, color 0.5s;
 }
 img, video { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px dashed var(--red); outline-offset: 4px; border-radius: 4px; }
+::selection { background: var(--teal); color: var(--paper); }
+:focus-visible { outline: 1.5px solid var(--teal); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.wrap { width: min(1180px, 100% - 32px); margin-inline: auto; }
-.hand { font-family: var(--hand); }
-.pen { font-family: var(--pen); }
-.type { font-family: var(--type); }
 
-/* ───────── 마스킹 테이프 ───────── */
-.tape {
-  position: absolute;
-  z-index: 2;
-  width: 88px;
-  height: 26px;
-  background: var(--tape);
-  /* 양 끝을 톱니처럼 찢은 모양 */
-  clip-path: polygon(0 8%, 4% 0, 8% 10%, 12% 0, 88% 0, 92% 12%, 96% 0, 100% 10%, 100% 90%, 96% 100%, 92% 88%, 88% 100%, 12% 100%, 8% 90%, 4% 100%, 0 92%);
-  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.08);
-  pointer-events: none;
+.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+.mincho { font-family: var(--mincho); }
+.latin { font-family: var(--mincho-latin); }
+.mute { color: var(--mute); }
+.small { font-size: 0.78rem; letter-spacing: 0.06em; }
+
+/* ───────── 세로글 (가사처럼) ───────── */
+.vert {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-family: var(--mincho);
 }
-.tape.teal { background: var(--tape-teal); }
-.tape.pink { background: var(--tape-pink); }
-.tape.top { top: -12px; left: 50%; translate: -50% 0; rotate: -3deg; }
-.tape.corner-l { top: -8px; left: -22px; rotate: -38deg; width: 72px; }
-.tape.corner-r { top: -8px; right: -22px; rotate: 38deg; width: 72px; }
+.vert .tcy { text-combine-upright: all; -webkit-text-combine: horizontal; }
+.vert .side { text-orientation: mixed; }   /* 영문은 옆으로 눕혀서 */
+:lang(en) .vert, .vert:lang(en) { text-orientation: mixed; }
 
-/* ───────── 폴라로이드 ───────── */
-.polaroid {
+/* ───────── 격자 (인스타처럼) ───────── */
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+.tile {
   position: relative;
   display: block;
-  background: var(--card);
-  padding: 10px 10px 0;
-  box-shadow: var(--shadow);
-  rotate: var(--tilt, 0deg);
-  transition: rotate 0.35s cubic-bezier(.3,1.4,.5,1), translate 0.35s cubic-bezier(.3,1.4,.5,1), box-shadow 0.35s;
-  text-decoration: none;
-}
-.polaroid img, .polaroid video { width: 100%; background: var(--paper-2); }
-.polaroid figcaption, .polaroid .cap {
-  font-family: var(--hand);
-  font-size: 1.05rem;
-  line-height: 1.3;
-  color: var(--ink-soft);
-  padding: 8px 4px 12px;
-  min-height: 42px;
-}
-a.polaroid:hover, button.polaroid:hover, .polaroid:focus-visible {
-  rotate: 0deg;
-  translate: 0 -4px;
-  box-shadow: var(--shadow-lift);
-  z-index: 3;
-}
-button.polaroid { border: 0; cursor: zoom-in; text-align: left; width: 100%; }
-
-/* ───────── 스탬프 ───────── */
-.stamp {
-  display: inline-grid;
-  place-items: center;
-  text-align: center;
-  color: var(--red);
-  border: 3px double currentColor;
-  border-radius: 50%;
-  aspect-ratio: 1;
-  padding: 10px;
-  font-family: var(--type);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  line-height: 1.05;
-  rotate: var(--tilt, -8deg);
-  opacity: 0.88;
-  mix-blend-mode: multiply;
-  /* 잉크가 덜 묻은 느낌 */
-  mask-image: radial-gradient(circle at 30% 40%, #000 55%, rgba(0,0,0,.7) 75%, #000 100%);
-}
-:root[data-theme='night'] .stamp { mix-blend-mode: normal; }
-.stamp.rect { border-radius: 6px; aspect-ratio: auto; padding: 4px 10px; border-width: 2px; border-style: solid; }
-.stamp.blue { color: var(--sea); }
-
-/* 한 번 '쾅' */
-@keyframes thud {
-  0% { scale: 1.8; opacity: 0; }
-  60% { scale: 0.94; opacity: 0.9; }
-  100% { scale: 1; opacity: 0.88; }
-}
-.stamp.thud { animation: thud 0.5s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: var(--delay, 0.2s); }
-
-/* ───────── 줄 노트 ───────── */
-.ruled {
-  background-image: linear-gradient(var(--rule) 1px, transparent 1px);
-  background-size: 100% 2em;
-  background-position: 0 1.85em;
-  line-height: 2em;
-}
-
-/* ───────── 칩 (필터) ───────── */
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip {
-  border: 1.5px solid var(--ink);
-  background: transparent;
-  border-radius: 999px;
-  padding: 4px 14px;
-  font-family: var(--hand);
-  font-size: 1.15rem;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--paper-2);
+  border: 0;
+  padding: 0;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, rotate 0.2s;
 }
-.chip:hover { rotate: -2deg; }
-.chip[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
-.chip .n { font-family: var(--type); font-size: 0.8em; opacity: 0.7; margin-left: 4px; }
+.tile img { width: 100%; height: 100%; object-fit: cover; transition: scale 0.8s cubic-bezier(.2,.7,.2,1), filter 0.5s; }
+.tile:hover img, .tile:focus-visible img { scale: 1.03; }
 
-/* 손글씨 밑줄 하이라이트 */
-.mark {
-  background: linear-gradient(transparent 58%, var(--tape) 58%, var(--tape) 92%, transparent 92%);
-  padding: 0 2px;
+/* 글자 탭 (필터) */
+.tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 28px; }
+.tab {
+  border: 0; background: none; padding: 10px 0 8px; cursor: pointer;
+  font-size: 0.76rem; letter-spacing: 0.14em; color: var(--mute);
+  border-top: 1px solid transparent;
+  margin-top: -1px;
+  transition: color 0.2s, border-color 0.2s;
 }
+.tab:hover { color: var(--ink); }
+.tab[aria-pressed='true'] { color: var(--ink); border-top-color: var(--ink); }
+.tab .n { margin-left: 4px; opacity: 0.6; }
 
-/* 등장: 스크롤하면 사진이 테이프에 붙듯 내려앉음 */
-.settle { opacity: 0; translate: 0 18px; scale: 1.02; }
-.settle.in { opacity: 1; translate: 0 0; scale: 1; transition: opacity 0.45s, translate 0.5s cubic-bezier(.2,.9,.3,1.1), scale 0.5s; }
-.no-js .settle { opacity: 1; translate: none; scale: none; }
+/* 천천히 떠오름 */
+.rise { opacity: 0; transition: opacity 0.6s ease; }
+.rise.in { opacity: 1; }
+.no-js .rise { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .polaroid, .stamp, .tilt { rotate: 0deg !important; }
-  .settle { opacity: 1; translate: none; scale: none; }
+  .rise { opacity: 1; }
   html { scroll-behavior: auto; }
+}
+@media (max-width: 760px) {
+  body { font-size: 14px; }
+  :root { --gap: 2px; }
 }

@@ -7,6 +7,9 @@ certs:
   - name: Freediver Lv.1
     org: AIDA / PADI / Molchanovs …
     date: 2026.05
+gear:
+  - Sony RX100 VI
+  - Lightroom
 favorites:
   - 시야 좋은 날 빛 내려오는 거
   - 수영장 컨셉 촬영

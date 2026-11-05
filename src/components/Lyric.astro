@@ -1,0 +1,66 @@
+---
+// 세로글 라벨: 뮤직비디오 가사처럼 날짜와 제목을 세로로 씀
+// 숫자는 세로 줄 안에서 가로로 묶어 씀 (2026년 8월 15일 → 2026·8·15가 한 칸씩)
+import type { Lang } from '../lib/i18n';
+
+interface Props {
+  date?: Date;
+  title: string;
+  lines?: (string | undefined)[];
+  lang: Lang;
+  size?: 'lg' | 'md' | 'sm';
+  as?: 'h1' | 'h2' | 'p';
+  class?: string;
+}
+const { date, title, lines = [], lang, size = 'md', as: Tag = 'p' } = Astro.props;
+
+const parts = date
+  ? lang === 'ko'
+    ? [
+        { n: String(date.getUTCFullYear()) }, { s: '년 ' },
+        { n: String(date.getUTCMonth() + 1) }, { s: '월 ' },
+        { n: String(date.getUTCDate()) }, { s: '일' },
+      ]
+    : [{ s: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) }]
+  : [];
+
+// 제목 속 숫자도 가로로 묶음 (예: "8월의 바다")
+const split = (s: string) => s.split(/(\d+)/).filter(Boolean).map((x) => (/^\d+$/.test(x) && x.length <= 4 ? { n: x } : { s: x }));
+const extra = lines.filter((l): l is string => Boolean(l));
+---
+<div class:list={['lyric', `lyric-${size}`, Astro.props.class]} lang={lang}>
+  <Tag class="vert l-title">
+    {split(title).map((p) => ('n' in p ? <span class="tcy">{p.n}</span> : p.s))}
+  </Tag>
+  {parts.length > 0 && (
+    <p class="vert l-date">
+      {parts.map((p) => ('n' in p ? <span class="tcy">{p.n}</span> : p.s))}
+    </p>
+  )}
+  {extra.map((l) => (
+    <p class="vert l-line">{split(l).map((p) => ('n' in p ? <span class="tcy">{p.n}</span> : p.s))}</p>
+  ))}
+</div>
+<style>
+  .lyric {
+    display: flex;
+    flex-direction: row-reverse;   /* 세로글은 오른쪽에서 왼쪽으로 읽음 */
+    align-items: flex-start;
+    gap: 0.9em;
+    color: var(--ink);
+  }
+  .lyric p, .lyric h1, .lyric h2 { margin: 0; }
+  .l-title { font-weight: 800; letter-spacing: 0.18em; word-spacing: -0.35em; line-height: 1.35; max-height: 78vh; }
+  .l-date { font-weight: 700; letter-spacing: 0.12em; color: var(--ink-2); padding-top: 0.4em; }
+  .l-line { font-weight: 400; letter-spacing: 0.12em; color: var(--mute); padding-top: 2.2em; }
+
+  .lyric-lg .l-title { font-size: clamp(1.9rem, 3.2vw, 2.7rem); }
+  .lyric-lg .l-date { font-size: 1rem; }
+  .lyric-lg .l-line { font-size: 0.88rem; }
+  .lyric-md .l-title { font-size: 1.5rem; }
+  .lyric-md .l-date { font-size: 0.86rem; }
+  .lyric-md .l-line { font-size: 0.8rem; }
+  .lyric-sm .l-title { font-size: 1.05rem; letter-spacing: 0.12em; }
+  .lyric-sm .l-date { font-size: 0.72rem; }
+  .lyric-sm .l-line { font-size: 0.7rem; padding-top: 1.4em; }
+</style>

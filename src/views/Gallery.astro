@@ -1,23 +1,14 @@
 ---
-// 사진 페이지: 현상소 밀착 인화지. 롤(다이빙 하루 / 일상 폴더)마다 인화지 한 장
-import { Image, getImage } from 'astro:assets';
+// 사진: 롤(다이빙 하루 / 일상 폴더)마다 격자 + 옆에 세로글
 import Base from '../layouts/Base.astro';
+import Lyric from '../components/Lyric.astro';
+import PhotoGrid from '../components/PhotoGrid.astro';
 import { getRolls } from '../lib/rolls';
-import { tilt } from '../lib/dives';
 import { t, href, formatDate, type Lang } from '../lib/i18n';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const rolls = await getRolls(lang);
-
-// 크게 보기용 사진 주소 미리 만들기
-const full = new Map<string, string>();
-for (const r of rolls) {
-  for (const p of r.photos) {
-    const img = await getImage({ src: p.src, width: Math.min(1800, p.src.width), format: 'webp', quality: 82 });
-    full.set(`${r.id}/${p.file}`, img.src);
-  }
-}
 
 const all = rolls.flatMap((r) => r.photos.map((p) => ({ r, p })));
 const counts = {
@@ -28,216 +19,74 @@ const counts = {
   me: all.filter((x) => x.p.isMe).length,
 };
 const filters = (['all', 'picks', 'diving', 'daily', 'me'] as const).filter((k) => k === 'all' || counts[k] > 0);
-const pad = (n: number) => String(n).padStart(2, '0');
-
-// 그리스 연필 동그라미: 사진 비율에 맞춰 손으로 그린 듯한 고리 (끝이 살짝 겹침)
-function loopPath(w: number, h: number) {
-  const P = (x: number, y: number) => `${((x / 100) * w).toFixed(1)} ${((y / 100) * h).toFixed(1)}`;
-  return `M${P(10, 46)} C${P(8, 16)}, ${P(42, 4)}, ${P(62, 7)} C${P(90, 11)}, ${P(98, 36)}, ${P(93, 60)} C${P(88, 86)}, ${P(58, 97)}, ${P(36, 92)} C${P(12, 87)}, ${P(3, 66)}, ${P(9, 40)} C${P(12, 28)}, ${P(22, 18)}, ${P(34, 14)}`;
-}
+const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '전체' : 'All') : t(lang, k));
 ---
 
 <Base lang={lang} path="gallery" title={t(lang, 'gallery')}>
-  <section class="wrap">
-    <header class="head">
-      <h1 class="pen">{t(lang, 'gallery')}</h1>
-      <p class="hand sub">{t(lang, 'sheetSub')} · {rolls.length} rolls · {all.length} {t(lang, 'frames')}</p>
-      <div class="chips" role="group" aria-label={t(lang, 'filter')}>
-        {filters.map((k, i) => (
-          <button type="button" class="chip" data-filter={k} aria-pressed={i === 0 ? 'true' : 'false'}>
-            {k === 'picks' && <span class="dot" aria-hidden="true">◯</span>}
-            {t(lang, k)}<span class="n">{counts[k]}</span>
-          </button>
-        ))}
-      </div>
-    </header>
+  <div class="wrap page">
+    <div class="tabs top-tabs" role="group" aria-label={t(lang, 'filter')}>
+      {filters.map((k, i) => (
+        <button type="button" class="tab" data-filter={k} aria-pressed={i === 0 ? 'true' : 'false'}>
+          {label(k)}<span class="n">{counts[k]}</span>
+        </button>
+      ))}
+    </div>
 
-    {rolls.map((r) => (
-      <article class="sheet settle" data-kind={r.kind} style={`--tilt:${tilt(r.id, 0.8).toFixed(2)}deg`}>
-        <header class="sheet-head">
-          <span class="roll type">ROLL<b>{pad(r.no)}</b></span>
-          <div class="label">
-            <h2 class="hand">{r.title}</h2>
-            <span class="type meta">
-              {formatDate(r.date, lang, 'stamp')} · {r.photos.length} {t(lang, 'frames')}
-            </span>
-          </div>
-          <span class:list={['stamp', 'rect', 'kind', { blue: r.kind === 'dive' }]} style="--tilt:-4deg">
-            {r.kind === 'dive' ? (r.place === 'pool' ? 'POOL' : 'SEA') : 'DAILY'}
-          </span>
-          {r.logPath && <a class="log-link hand" href={href(lang, r.logPath)}>{t(lang, 'seeLog')}</a>}
-        </header>
-
-        <div class="strips">
-          {r.photos.map((p, i) => (
-            <button
-              type="button"
-              class="frame"
-              data-full={full.get(`${r.id}/${p.file}`)}
-              data-alt={`${r.title} ${i + 1}`}
-              data-caption={`ROLL ${pad(r.no)} · #${i + 1} · ${formatDate(r.date, lang, 'stamp')} · ${r.title}`}
-              data-kind={r.kind === 'dive' ? 'diving' : 'daily'}
-              data-pick={p.isPick ? '1' : undefined}
-              data-me={p.isMe ? '1' : undefined}
-            >
-              <Image
-                src={p.src}
-                alt={`${r.title} ${i + 1}`}
-                widths={[240, 480]}
-                sizes="(max-width: 640px) 160px, 240px"
-                format="webp"
-                quality={72}
-                loading={r.no > rolls.length - 2 ? 'eager' : 'lazy'}
-              />
-              <span class="fno type" aria-hidden="true">{i + 1}<i>▸</i>{i + 1}A</span>
-              {p.isPick && (
-                <svg
-                  class="loop"
-                  viewBox={`0 0 ${Math.round((100 * p.src.width) / p.src.height)} 100`}
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                  style={`rotate:${tilt(p.file, 5).toFixed(1)}deg`}
-                >
-                  <path d={loopPath(Math.round((100 * p.src.width) / p.src.height), 100)} pathLength="1" />
-                </svg>
-              )}
-            </button>
-          ))}
+    {rolls.map((r, i) => (
+      <section class="roll" data-kind={r.kind}>
+        <div class="grid-col">
+          <PhotoGrid
+            photos={r.photos}
+            title={r.title}
+            caption={formatDate(r.date, lang, 'stamp')}
+            kind={r.kind === 'dive' ? 'diving' : 'daily'}
+            eagerCount={i === 0 ? 6 : 0}
+          />
+          {r.logPath && <a class="go small" href={href(lang, r.logPath)}>{lang === 'ko' ? '이날의 기록' : 'Read this day'} ›</a>}
         </div>
-      </article>
+        <aside class="side">
+          <Lyric title={r.title} date={r.date} lang={lang} size="md" as="h2" />
+        </aside>
+      </section>
     ))}
-  </section>
+  </div>
 </Base>
 
 <script>
-  const chips = document.querySelectorAll<HTMLButtonElement>('.chip[data-filter]');
+  const tabs = document.querySelectorAll<HTMLButtonElement>('.tab[data-filter]');
   const match = (el: HTMLElement, f: string) =>
     f === 'all' ||
     (f === 'picks' && el.dataset.pick === '1') ||
     (f === 'me' && el.dataset.me === '1') ||
     el.dataset.kind === f;
-  chips.forEach((chip) =>
-    chip.addEventListener('click', () => {
-      const f = chip.dataset.filter!;
-      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
-      document.querySelectorAll<HTMLElement>('.frame').forEach((el) => (el.hidden = !match(el, f)));
-      document.querySelectorAll<HTMLElement>('.sheet').forEach((s) => {
-        s.hidden = !s.querySelector('.frame:not([hidden])');
+  tabs.forEach((tab) =>
+    tab.addEventListener('click', () => {
+      const f = tab.dataset.filter!;
+      tabs.forEach((x) => x.setAttribute('aria-pressed', String(x === tab)));
+      document.querySelectorAll<HTMLElement>('.pg li').forEach((el) => (el.hidden = !match(el, f)));
+      document.querySelectorAll<HTMLElement>('.roll').forEach((s) => {
+        s.hidden = !s.querySelector('.pg li:not([hidden])');
       });
     }),
   );
 </script>
 
 <style>
-  .head {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px;
-    margin: 26px 0 34px; border-bottom: 2px solid var(--ink); padding-bottom: 12px;
-  }
-  h1 { font-size: 3.2rem; font-weight: 400; margin: 0; line-height: 1; }
-  .sub { margin: 0; color: var(--ink-soft); font-size: 1.2rem; margin-right: auto; }
-  .chip .dot { color: var(--red); margin-right: 3px; font-size: 0.9em; }
+  .page { max-width: 1060px; padding-top: 12px; }
+  .top-tabs { border-top: 1px solid var(--rule); margin-bottom: 36px; }
+  .roll { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: clamp(20px, 4vw, 48px); margin-bottom: clamp(56px, 8vw, 96px); }
+  .roll[hidden] { display: none; }
+  .side { position: sticky; top: 32px; align-self: start; display: flex; justify-content: flex-start; }
+  .go { display: inline-block; margin-top: 10px; text-decoration: none; color: var(--mute); }
+  .go:hover { color: var(--ink); }
 
-  /* ───── 인화지 한 장 ───── */
-  .sheet {
-    --sheet: #fbfaf6;
-    --film: #121212;
-    --edge: #e59a3a;
-    --grease: #e2382c;
-    --h: 150px;
-    background: var(--sheet);
-    box-shadow: var(--shadow);
-    padding: 20px 24px 26px;
-    margin-bottom: 44px;
-    rotate: var(--tilt);
-  }
-  :global(:root[data-theme='night']) .sheet { --sheet: #e9e4d8; }
-  .sheet.in { rotate: var(--tilt); }
-
-  .sheet-head {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
-    margin-bottom: 16px; color: #1b2a4a;
-  }
-  .roll {
-    display: grid; justify-items: center; line-height: 1;
-    font-size: 0.62rem; letter-spacing: 0.2em;
-    border: 2px solid currentColor; padding: 5px 8px 4px; border-radius: 4px;
-  }
-  .roll b { font-size: 1.5rem; letter-spacing: 0.04em; }
-  .label { margin-right: auto; min-width: 0; }
-  .label h2 { margin: 0; font-size: 1.7rem; line-height: 1.1; font-weight: 700; }
-  .meta { font-size: 0.75rem; color: #55617d; letter-spacing: 0.06em; }
-  .kind { font-size: 0.7rem; color: #d2463a; mix-blend-mode: multiply; }
-  .kind.blue { color: #1f6f8b; }
-  .log-link { font-size: 1.1rem; text-decoration: none; background: linear-gradient(transparent 60%, rgba(242,210,122,.8) 60%); }
-  .log-link:hover { color: #d2463a; }
-
-  /* ───── 필름 ───── */
-  .strips { display: flex; flex-wrap: wrap; row-gap: 14px; }
-  .frame {
-    position: relative;
-    flex: none;
-    border: 0;
-    margin: 0;
-    padding: 24px 4px;
-    background: var(--film);
-    cursor: zoom-in;
-    transition: scale 0.2s, box-shadow 0.2s, z-index 0s;
-  }
-  .frame img {
-    display: block;
-    height: var(--h);
-    width: auto;
-    max-width: none;
-    transition: opacity 0.2s, filter 0.2s;
-  }
-  /* 위아래 필름 구멍 */
-  .frame::before,
-  .frame::after {
-    content: '';
-    position: absolute; left: 0; right: 0; height: 8px;
-    background: var(--sheet);
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8'%3E%3Crect x='3' y='0' width='8' height='8' rx='1.6'/%3E%3C/svg%3E") repeat-x left center / 14px 8px;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8'%3E%3Crect x='3' y='0' width='8' height='8' rx='1.6'/%3E%3C/svg%3E") repeat-x left center / 14px 8px;
-  }
-  .frame::before { top: 6px; }
-  .frame::after { bottom: 6px; }
-  /* 필름 가장자리 번호 */
-  .fno {
-    position: absolute; left: 8px; bottom: 15px;
-    font-size: 8px; line-height: 1; letter-spacing: 0.08em;
-    color: var(--edge); opacity: 0.9;
-  }
-  .fno i { font-style: normal; margin: 0 4px 0 6px; }
-
-  /* 확대경: 올리면 그 컷만 밝게 */
-  .frame:hover, .frame:focus-visible { scale: 1.06; z-index: 3; box-shadow: 0 14px 26px -10px rgba(0,0,0,.6); }
-  .strips:has(.frame:hover) .frame:not(:hover) img { opacity: 0.55; filter: grayscale(0.4); }
-
-  /* 고른 컷: 빨간 그리스 연필 동그라미 */
-  .loop {
-    position: absolute; inset: 8px -6px; width: calc(100% + 12px); height: calc(100% - 16px);
-    overflow: visible; pointer-events: none; z-index: 2;
-  }
-  .loop path {
-    fill: none; stroke: var(--grease); stroke-width: 2.6; stroke-linecap: round;
-    stroke-dasharray: 1; stroke-dashoffset: 1;
-    filter: drop-shadow(0 0 0.5px rgba(0,0,0,.3));
-  }
-  .sheet.in .loop path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.9s ease-out 0.3s; }
-  :global(.no-js) .loop path { stroke-dashoffset: 0; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .loop path { stroke-dashoffset: 0; }
-  }
-  @media (max-width: 640px) {
-    h1 { font-size: 2.6rem; }
-    .sheet { --h: calc((100vw - 70px) / 3.1); padding: 14px 10px 18px; rotate: 0deg; margin-inline: -6px; }
-    .sheet.in { rotate: 0deg; }
-    .frame { padding: 20px 3px; }
-    .frame::before { top: 5px; }
-    .frame::after { bottom: 5px; }
-    .fno { bottom: 12px; font-size: 7px; }
-    .label h2 { font-size: 1.4rem; }
-    .strips { row-gap: 10px; }
+  @media (max-width: 760px) {
+    .page { width: 100%; }
+    .top-tabs { margin-inline: 16px; }
+    .roll { grid-template-columns: minmax(0, 1fr) 64px; gap: 10px; }
+    .side { top: 12px; padding-right: 8px; }
+    .side :global(.lyric-md .l-title) { font-size: 1.1rem; }
+    .side :global(.lyric-md .l-date) { font-size: 0.72rem; }
+    .go { margin-left: 8px; }
   }
 </style>

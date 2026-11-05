@@ -3,13 +3,11 @@
 interface Props { id: string; label: string }
 const { id, label } = Astro.props;
 ---
-<div class="yt polaroid settle" style="--tilt:-1deg">
-  <span class="tape top teal" aria-hidden="true"></span>
+<div class="yt">
   <button type="button" class="yt-play" data-yt={id} aria-label={label}>
     <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy" width="480" height="360" />
     <span class="yt-btn" aria-hidden="true">▶</span>
   </button>
-  <span class="cap">▶ {label}</span>
 </div>
 <script>
   document.querySelectorAll<HTMLButtonElement>('.yt-play').forEach((btn) =>
@@ -29,7 +27,7 @@ const { id, label } = Astro.props;
   .yt :global(iframe) { width: 100%; aspect-ratio: 16/9; border: 0; display: block; }
   .yt-btn {
     position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%;
-    display: grid; place-items: center; background: var(--red); color: #fff; font-size: 1.5rem;
+    display: grid; place-items: center; background: var(--ink); color: var(--paper); font-size: 1.3rem;
     box-shadow: 0 6px 20px rgba(0,0,0,.4);
   }
 </style>
