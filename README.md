@@ -47,14 +47,14 @@
 ## 내 컴퓨터에서 미리 보기
 ```bash
 npm install   # 처음 한 번만
-npm run dev   # → http://localhost:4321/young_diving_log/
+npm run dev   # → http://localhost:4321/diving_log/
 ```
 
 ## 처음 배포할 때 (한 번만)
-1. GitHub에 `young_diving_log` 저장소를 만들고 이 폴더를 push
+1. GitHub에 `diving_log` 저장소를 만들고 이 폴더를 push
 2. `site.config.mjs` 의 `githubUser` 를 내 아이디로
 3. 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로
-4. 주소: `https://<아이디>.github.io/young_diving_log/`
+4. 주소: `https://<아이디>.github.io/diving_log/`
 
 ## 폴더 구조
 ```

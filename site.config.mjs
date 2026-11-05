@@ -5,6 +5,6 @@ export const SITE = {
   profileName: '다이빙캣',
   // GitHub 아이디와 저장소 이름 (주소: https://<githubUser>.github.io/<repo>/)
   githubUser: 'elain2',
-  repo: 'young_diving_log',
+  repo: 'diving_log',
   instagram: 'free.young.510', // 비워두면 링크 숨김
 };

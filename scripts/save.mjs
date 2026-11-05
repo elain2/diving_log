@@ -127,7 +127,7 @@ async function main() {
   say('\n⬆️  올리는 중…');
   execFileSync('git', ['push', '-q'], { cwd: ROOT, stdio: 'inherit' });
   say('\n✅ 올렸어요! 2~3분 뒤 사이트에 반영돼요.');
-  say('   https://elain2.github.io/young_diving_log/');
+  say('   https://elain2.github.io/diving_log/');
 }
 
 main().catch((err) => {
