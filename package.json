@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "add": "node scripts/add-photos.mjs"
+    "add": "node scripts/add-photos.mjs",
+    "save": "node scripts/save.mjs"
   },
   "dependencies": {
     "astro": "^5.18.2",
