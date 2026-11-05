@@ -125,6 +125,3 @@ export function tilt(seed: string, max = 3) {
   return ((Math.abs(h) % 1000) / 1000) * max * 2 - max;
 }
 
-export function monthKey(d: Date) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}

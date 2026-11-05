@@ -107,17 +107,14 @@ export function href(lang: Lang, path = '') {
   return `/${parts.replace(/^\//, '')}/`.replace(/\/+/g, '/');
 }
 
+/** 연도는 두 자리로: 2026 → 26 */
+export const shortYear = (d: Date) => String(d.getUTCFullYear() % 100).padStart(2, '0');
+
 export function formatDate(d: Date, lang: Lang, style: 'long' | 'stamp' = 'long') {
-  const y = d.getUTCFullYear();
+  const y = shortYear(d);
   const m = d.getUTCMonth() + 1;
   const day = d.getUTCDate();
   if (style === 'stamp') return `${y}.${String(m).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
   if (lang === 'ko') return `${y}년 ${m}월 ${day}일`;
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
-}
-
-export function monthLabel(key: string, lang: Lang) {
-  const [y, m] = key.split('-').map(Number);
-  const en = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
-  return lang === 'ko' ? { big: `${m}월`, small: `${en} ${y}` } : { big: en, small: String(y) };
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, '${y}`;
 }

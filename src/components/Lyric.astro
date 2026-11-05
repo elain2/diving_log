@@ -1,7 +1,7 @@
 ---
 // 세로글 라벨: 뮤직비디오 가사처럼 날짜와 제목을 세로로 씀
-// 숫자는 세로 줄 안에서 가로로 묶어 씀 (2026년 8월 15일 → 2026·8·15가 한 칸씩)
-import type { Lang } from '../lib/i18n';
+// 숫자는 세로 줄 안에서 가로로 묶어 씀 (26년 8월 15일 → 26·8·15가 한 칸씩)
+import { shortYear, type Lang } from '../lib/i18n';
 
 interface Props {
   date?: Date;
@@ -17,11 +17,11 @@ const { date, title, lines = [], lang, size = 'md', as: Tag = 'p' } = Astro.prop
 const parts = date
   ? lang === 'ko'
     ? [
-        { n: String(date.getUTCFullYear()) }, { s: '년 ' },
+        { n: shortYear(date) }, { s: '년 ' },
         { n: String(date.getUTCMonth() + 1) }, { s: '월 ' },
         { n: String(date.getUTCDate()) }, { s: '일' },
       ]
-    : [{ s: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) }]
+    : [{ s: `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, '${shortYear(date)}` }]
   : [];
 
 // 제목 속 숫자도 가로로 묶음 (예: "8월의 바다")

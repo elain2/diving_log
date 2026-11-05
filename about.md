@@ -6,7 +6,7 @@ certs:
   # 자격증. 이름·단체·날짜를 바꿔 적어주세요
   - name: Freediver Lv.1
     org: AIDA / PADI / Molchanovs …
-    date: 2026.05
+    date: "26.05"
 gear:
   - Sony RX100 VI
   - Lightroom
