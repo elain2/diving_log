@@ -31,7 +31,7 @@ const filters = [
           {profile.photo && <Image src={profile.photo} alt={profile.name} widths={[160, 320]} sizes="140px" format="webp" loading="eager" />}
         </div>
         <div class="info">
-          <h1 class="name latin">{SITE.name}</h1>
+          <h1 class="name mincho">{SITE.profileName ?? SITE.name}</h1>
           <ul class="counts">
             <li><b>{s.days}</b> {lang === 'ko' ? '번의 다이빙' : 'dives'}</li>
             <li><b>{s.photos}</b> {lang === 'ko' ? '장의 사진' : 'photos'}</li>
