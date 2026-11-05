@@ -100,7 +100,7 @@ export const t = (lang: Lang, key: Key) => dict[lang][key];
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-/** 언어에 맞는 사이트 내부 주소. href('en', 'gallery') → /diving_log/en/gallery/ */
+/** 언어에 맞는 사이트 내부 주소. href('en', 'gallery') → /young_diving_log/en/gallery/ */
 export function href(lang: Lang, path = '') {
   const clean = path.replace(/^\/|\/$/g, '');
   const parts = [base, lang === 'en' ? 'en' : '', clean].filter(Boolean).join('/');
