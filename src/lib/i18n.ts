@@ -28,7 +28,7 @@ const dict = {
     next: '다음 다이빙',
     draft: '작성 중',
     untitledSea: '바다에 간 날',
-    untitledPool: '수영장 가는 날',
+    untitledPool: '수영장 간 날',
     playVideo: '영상 재생',
     close: '닫기',
     since: '부터 쓰는 다이빙 일기',
