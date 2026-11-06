@@ -12,8 +12,8 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const dives = await getDives(lang);
 const s = stats(dives);
-const first = dives.at(-1)?.data.date;
 const profile = await getProfile(lang);
+const first = profile.since?.date ?? dives.at(-1)?.data.date;
 
 const filters = [
   { key: 'all', label: lang === 'ko' ? '전체' : 'All', n: dives.length },
@@ -70,6 +70,7 @@ const filters = [
       <Lyric
         title={lang === 'ko' ? '숨 참고 내려간 날들' : 'the days I held my breath'}
         date={first}
+        monthOnly={profile.since?.monthOnly}
         lines={[lang === 'ko' ? '부터 지금까지' : 'and on']}
         lang={lang}
         size="lg"

@@ -20,8 +20,19 @@ export async function getProfile(lang: Lang) {
     mePhoto?.src ||
     dives.find((d) => d.cover)?.cover?.src;
 
+  // 다이빙 시작한 날: "2025-01" 또는 "2025-01-15"
+  const sinceStr = entry.data.since ?? ko.data.since;
+  const sinceMatch = sinceStr?.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
+  const since = sinceMatch
+    ? {
+        date: new Date(Date.UTC(+sinceMatch[1], +sinceMatch[2] - 1, sinceMatch[3] ? +sinceMatch[3] : 1)),
+        monthOnly: !sinceMatch[3],
+      }
+    : undefined;
+
   return {
     entry,
+    since,
     name: entry.data.name,
     tagline: entry.data.tagline ?? ko.data.tagline,
     photo,

@@ -5,6 +5,8 @@ import { shortYear, type Lang } from '../lib/i18n';
 
 interface Props {
   date?: Date;
+  /** 날짜를 달까지만 보여줌 (25년 1월) */
+  monthOnly?: boolean;
   title: string;
   lines?: (string | undefined)[];
   lang: Lang;
@@ -12,16 +14,18 @@ interface Props {
   as?: 'h1' | 'h2' | 'p';
   class?: string;
 }
-const { date, title, lines = [], lang, size = 'md', as: Tag = 'p' } = Astro.props;
+const { date, monthOnly = false, title, lines = [], lang, size = 'md', as: Tag = 'p' } = Astro.props;
 
 const parts = date
   ? lang === 'ko'
     ? [
         { n: shortYear(date) }, { s: '년 ' },
-        { n: String(date.getUTCMonth() + 1) }, { s: '월 ' },
-        { n: String(date.getUTCDate()) }, { s: '일' },
+        { n: String(date.getUTCMonth() + 1) }, { s: monthOnly ? '월' : '월 ' },
+        ...(monthOnly ? [] : [{ n: String(date.getUTCDate()) }, { s: '일' }]),
       ]
-    : [{ s: `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, '${shortYear(date)}` }]
+    : [{ s: monthOnly
+        ? `${date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })} '${shortYear(date)}`
+        : `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, '${shortYear(date)}` }]
   : [];
 
 // 제목 속 숫자도 가로로 묶음 (예: "8월의 바다")

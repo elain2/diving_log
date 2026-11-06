@@ -57,6 +57,7 @@ const about = defineCollection({
   schema: z.object({
     name: z.string(),
     tagline: optStr,
+    since: optStr, // 다이빙 시작한 날 예: 2025-01 (달까지만 적으면 달까지만 보여줌)
     photo: optStr, // dives/ 안의 사진 경로 예: 2026-08-20/photos/YOUNG-12.jpg
     certs: z
       .array(z.object({ name: z.string(), org: optStr, date: optStr }))

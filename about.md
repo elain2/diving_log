@@ -1,6 +1,7 @@
 ---
 name: free.young.510
 tagline: 숨 한 번에 내려가는 만큼만
+since: "2025-01-18"   # 다이빙 시작한 날 (YYYY-MM-DD, 달만 알면 YYYY-MM). 생략하면 첫 기록 날짜
 # photo: 2026-08-20/photos/YOUNG-12.jpg   # 여기 들어갈 내 사진 (생략하면 '-me' 사진이나 첫 사진)
 certs:
   # 자격증. 이름·단체·날짜를 바꿔 적어주세요

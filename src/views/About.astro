@@ -15,7 +15,7 @@ const profile = await getProfile(lang);
 const { Content } = await render(profile.entry);
 const dives = await getDives(lang);
 const s = stats(dives);
-const first = dives.at(-1)?.data.date;
+const first = profile.since?.date ?? dives.at(-1)?.data.date;
 const ko = lang === 'ko';
 ---
 
@@ -65,7 +65,7 @@ const ko = lang === 'ko';
     </div>
 
     <aside class="side">
-      <Lyric as="h1" title={profile.name} date={first} lines={[ko ? '부터 바다에' : 'in the water since']} lang={lang} size="lg" />
+      <Lyric as="h1" title={profile.name} date={first} monthOnly={profile.since?.monthOnly} lines={[ko ? '부터 바다에' : 'in the water since']} lang={lang} size="lg" />
     </aside>
   </div>
 </Base>
