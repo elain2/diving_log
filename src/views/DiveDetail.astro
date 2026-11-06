@@ -5,6 +5,7 @@ import Base from '../layouts/Base.astro';
 import Lyric from '../components/Lyric.astro';
 import PhotoGrid from '../components/PhotoGrid.astro';
 import YouTube from '../components/YouTube.astro';
+import Clip from '../components/Clip.astro';
 import type { Dive } from '../lib/dives';
 import { t, href, formatDate, type Lang } from '../lib/i18n';
 
@@ -41,7 +42,7 @@ const caption = [formatDate(d.date, lang, 'stamp'), dive.location].filter(Boolea
 
       {(dive.clips.length > 0 || d.youtube.length > 0) && (
         <section class="films" aria-label={t(lang, 'videos')}>
-          {dive.clips.map((c) => <video src={c.src} poster={c.poster?.src} autoplay muted loop playsinline preload="metadata" aria-label={t(lang, 'moving')} />)}
+          {dive.clips.map((c) => <Clip clip={c} label={t(lang, 'moving')} lang={lang} />)}
           {d.youtube.map((id) => <YouTube id={id} label={dive.title} />)}
         </section>
       )}
@@ -83,9 +84,8 @@ const caption = [formatDate(d.date, lang, 'stamp'), dive.location].filter(Boolea
   .dot { margin: 0 8px; color: var(--mute); }
   .draft { color: var(--teal); }
 
-  /* 세로 영상은 높이를 제한해서 나란히, 가로 영상은 폭에 맞게 */
+  /* 영상들은 가운데 정렬로 나란히 (크기는 Clip에서) */
   .films { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); margin-bottom: var(--gap); }
-  .films video { width: auto; max-width: 100%; height: auto; max-height: min(72vh, 600px); background: #000; }
 
   .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule); }
   .pager a { text-decoration: none; }

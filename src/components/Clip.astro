@@ -1,0 +1,110 @@
+---
+// 다이빙 영상 한 편: 소리 없이 자동 반복 재생 + 위에 얹는 재생/일시정지·시간 막대
+import type { Clip } from '../lib/dives';
+import type { Lang } from '../lib/i18n';
+
+interface Props { clip: Clip; label: string; lang: Lang }
+const { clip, label, lang } = Astro.props;
+const ko = lang === 'ko';
+---
+
+<figure class="clip" data-clip data-play-label={ko ? '재생' : 'Play'} data-pause-label={ko ? '일시정지' : 'Pause'}>
+  <video src={clip.src} poster={clip.poster?.src} autoplay muted loop playsinline preload="metadata" aria-label={label}></video>
+  <div class="bar">
+    <button type="button" class="toggle" aria-label={ko ? '일시정지' : 'Pause'}>
+      <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="0.8" /><rect x="9.5" y="2.5" width="3" height="11" rx="0.8" /></svg>
+      <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.6v10.8a.6.6 0 0 0 .9.5l8.6-5.4a.6.6 0 0 0 0-1L5.4 2.1a.6.6 0 0 0-.9.5z" /></svg>
+    </button>
+    <input class="seek" type="range" min="0" max="1000" value="0" step="1" aria-label={ko ? '재생 위치' : 'Seek'} />
+    <span class="time latin"><span class="cur">0:00</span> / <span class="dur">0:00</span></span>
+  </div>
+</figure>
+
+<script>
+  const fmt = (s: number) => {
+    if (!Number.isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-clip]').forEach((box) => {
+    const v = box.querySelector('video')!;
+    const btn = box.querySelector<HTMLButtonElement>('.toggle')!;
+    const seek = box.querySelector<HTMLInputElement>('.seek')!;
+    const cur = box.querySelector('.cur')!;
+    const dur = box.querySelector('.dur')!;
+    let dragging = false;
+
+    const sync = () => {
+      box.classList.toggle('paused', v.paused);
+      btn.setAttribute('aria-label', (v.paused ? box.dataset.playLabel : box.dataset.pauseLabel) ?? '');
+    };
+    const tick = () => {
+      cur.textContent = fmt(v.currentTime);
+      if (!dragging && v.duration) seek.value = String((v.currentTime / v.duration) * 1000);
+      seek.style.setProperty('--p', `${(Number(seek.value) / 10).toFixed(1)}%`);
+    };
+    const toggle = () => (v.paused ? v.play() : v.pause());
+
+    btn.addEventListener('click', toggle);
+    v.addEventListener('click', toggle);
+    v.addEventListener('play', sync);
+    v.addEventListener('pause', sync);
+    v.addEventListener('timeupdate', tick);
+    v.addEventListener('loadedmetadata', () => { dur.textContent = fmt(v.duration); tick(); });
+    if (v.readyState >= 1) dur.textContent = fmt(v.duration);
+
+    seek.addEventListener('input', () => {
+      dragging = true;
+      if (v.duration) v.currentTime = (Number(seek.value) / 1000) * v.duration;
+      tick();
+    });
+    seek.addEventListener('change', () => { dragging = false; });
+    sync();
+  });
+</script>
+
+<style>
+  /* 세로 영상은 높이를 제한, 가로 영상은 폭에 맞게 (감싸는 상자는 영상 크기를 따라감) */
+  .clip { position: relative; margin: 0; max-width: 100%; line-height: 0; background: #000; }
+  .clip video { display: block; width: auto; max-width: 100%; height: auto; max-height: min(72vh, 600px); cursor: pointer; }
+
+  .bar {
+    position: absolute; inset: auto 0 0 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 28px 12px 10px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+    color: #fff; line-height: 1;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  /* 마우스를 올렸을 때, 키보드로 골랐을 때, 멈춰 있을 때는 보임. 터치 화면은 항상 */
+  .clip:hover .bar, .clip:focus-within .bar, .clip.paused .bar { opacity: 1; }
+  @media (hover: none) { .bar { opacity: 1; } }
+
+  .toggle {
+    flex: none; display: grid; place-items: center;
+    width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16); color: #fff; cursor: pointer;
+  }
+  .toggle:hover { background: rgba(255, 255, 255, 0.28); }
+  .toggle svg { width: 13px; height: 13px; fill: currentColor; }
+  .i-play, .clip.paused .i-pause { display: none; }
+  .clip.paused .i-play { display: block; }
+
+  .seek {
+    flex: 1; min-width: 40px; height: 14px; margin: 0;
+    appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer;
+  }
+  .seek::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px;
+    background: linear-gradient(to right, #fff var(--p, 0%), rgba(255, 255, 255, 0.35) var(--p, 0%));
+  }
+  .seek::-moz-range-track { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); }
+  .seek::-moz-range-progress { height: 3px; border-radius: 2px; background: #fff; }
+  .seek::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%; background: #fff; }
+  .seek::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: #fff; }
+
+  .time { flex: none; font-size: 0.7rem; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; opacity: 0.9; }
+
+  .toggle:focus-visible, .seek:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+</style>
