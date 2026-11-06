@@ -1,0 +1,131 @@
+---
+// 사진 페이지 날짜 인덱스: 깃헙 잔디처럼 하루 한 칸. 사진이 있는 날을 누르면 그 롤로 이동
+import type { Roll } from '../lib/rolls';
+import { t, formatDate, shortYear, type Lang } from '../lib/i18n';
+
+interface Props { rolls: Roll[]; lang: Lang }
+const { rolls, lang } = Astro.props;
+const ko = lang === 'ko';
+const DAY = 86_400_000;
+const key = (d: Date) => d.toISOString().slice(0, 10);
+
+// 날짜 → 그날의 롤들 (한 날에 다이빙·일상이 같이 있을 수 있음)
+const byDay = new Map<string, Roll[]>();
+for (const r of rolls) byDay.set(key(r.date), [...(byDay.get(key(r.date)) ?? []), r]);
+
+// 사진 수 → 진하기 1~4
+const level = (n: number) => (n >= 20 ? 4 : n >= 10 ? 3 : n >= 4 ? 2 : 1);
+
+// 최신 연도부터 한 줄씩. 주는 일요일부터 (깃헙처럼)
+const years = [...new Set(rolls.map((r) => r.date.getUTCFullYear()))].sort((a, b) => b - a);
+const graphs = years.map((y) => {
+  const jan1 = Date.UTC(y, 0, 1);
+  const start = jan1 - new Date(jan1).getUTCDay() * DAY;
+  const dec31 = Date.UTC(y, 11, 31);
+  const end = dec31 + (6 - new Date(dec31).getUTCDay()) * DAY;
+  const weeks: { date: Date; inYear: boolean; rolls: Roll[] }[][] = [];
+  for (let t0 = start; t0 <= end; t0 += 7 * DAY) {
+    weeks.push(
+      Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(t0 + i * DAY);
+        return { date, inYear: date.getUTCFullYear() === y, rolls: byDay.get(key(date)) ?? [] };
+      }),
+    );
+  }
+  // 달 이름은 그 달 1일이 들어 있는 주 위에
+  const months = weeks.map((w) => w.find((c) => c.inYear && c.date.getUTCDate() === 1)?.date.getUTCMonth());
+  const days = rolls.filter((r) => r.date.getUTCFullYear() === y).reduce((s, r) => s + r.photos.length, 0);
+  return { y, weeks, months, days };
+});
+
+const monthName = (m: number) =>
+  ko ? `${m + 1}월` : new Date(Date.UTC(2000, m, 1)).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+const weekday = ko ? ['', '월', '', '수', '', '금', ''] : ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const cellLabel = (c: { date: Date; rolls: Roll[] }) =>
+  [formatDate(c.date, lang, 'stamp'), ...c.rolls.map((r) => `${r.title} · ${r.photos.length}${ko ? '장' : ' photos'}`)].join(' — ');
+---
+
+<nav class="dindex" aria-label={ko ? '날짜로 이동' : 'Jump to a date'}>
+  {graphs.map((g) => (
+    <div class="year">
+      <p class="y small mute latin">'{shortYear(new Date(Date.UTC(g.y, 0, 1)))}<span>{g.days}{ko ? '장' : ''}</span></p>
+      <div class="scroll">
+        <div class="graph" style={`--weeks:${g.weeks.length}`}>
+          <span class="corner" aria-hidden="true"></span>
+          {g.months.map((m) => <span class="m" aria-hidden="true">{m !== undefined ? monthName(m) : ''}</span>)}
+          {weekday.map((w, i) => (
+            <span class="wd" aria-hidden="true" style={`grid-row:${i + 2}`}>{w}</span>
+          ))}
+          {g.weeks.map((w, wi) =>
+            w.map((c, di) => {
+              const pos = `grid-column:${wi + 2};grid-row:${di + 2}`;
+              if (!c.inYear) return <span class="c out" style={pos} aria-hidden="true"></span>;
+              if (!c.rolls.length) return <span class="c" style={pos} aria-hidden="true"></span>;
+              const n = c.rolls.reduce((s, r) => s + r.photos.length, 0);
+              const kind = c.rolls.some((r) => r.kind === 'dive') ? 'dive' : 'daily';
+              return (
+                <a
+                  class="c on"
+                  style={pos}
+                  href={`#roll-${c.rolls[0].id}`}
+                  data-kind={kind}
+                  data-lv={level(n)}
+                  data-rolls={c.rolls.map((r) => r.id).join(' ')}
+                  title={cellLabel(c)}
+                  aria-label={cellLabel(c)}
+                ></a>
+              );
+            }),
+          )}
+        </div>
+      </div>
+    </div>
+  ))}
+  <p class="legend small mute" aria-hidden="true">
+    <span><i class="c on" data-kind="dive" data-lv="3"></i>{t(lang, 'diving')}</span>
+    <span><i class="c on" data-kind="daily" data-lv="3"></i>{t(lang, 'daily')}</span>
+    <span class="scale">{ko ? '적게' : 'Less'}{[1, 2, 3, 4].map((l) => <i class="c on" data-kind="dive" data-lv={l}></i>)}{ko ? '많이' : 'More'}</span>
+  </p>
+</nav>
+
+<style>
+  .dindex { margin: -12px 0 40px; }
+  .year { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 8px; margin-bottom: 10px; }
+  .y { margin: 16px 0 0; line-height: 1.2; }
+  .y span { display: block; font-size: 0.64rem; opacity: 0.7; }
+  .scroll { overflow-x: auto; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  .graph {
+    --cell: 12px;
+    display: grid;
+    grid-template-columns: 22px repeat(var(--weeks), var(--cell));
+    grid-template-rows: 14px repeat(7, var(--cell));
+    gap: 3px;
+    width: max-content;
+  }
+  .m { grid-row: 1; font-size: 0.6rem; color: var(--mute); white-space: nowrap; line-height: 14px; overflow: visible; }
+  .wd { grid-column: 1; font-size: 0.56rem; color: var(--mute); line-height: var(--cell); }
+
+  .c { display: block; width: var(--cell); height: var(--cell); border-radius: 2px; background: var(--paper-2); }
+  .c.out { background: transparent; }
+  .c.on { --hue: var(--teal); background: color-mix(in srgb, var(--hue) var(--pct), var(--paper-2)); transition: transform 0.15s, opacity 0.2s, outline-color 0.2s; outline: 1.5px solid transparent; outline-offset: 1px; }
+  .c.on[data-kind='daily'] { --hue: var(--ink); }
+  .c.on[data-lv='1'] { --pct: 30%; }
+  .c.on[data-lv='2'] { --pct: 55%; }
+  .c.on[data-lv='3'] { --pct: 78%; }
+  .c.on[data-lv='4'] { --pct: 100%; }
+  a.c.on:hover { transform: scale(1.35); }
+  a.c.on.here { outline-color: var(--ink); }
+  a.c.on.off { opacity: 0.15; pointer-events: none; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: flex-end; margin: 6px 0 0; font-size: 0.66rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .c { --cell: 10px; display: inline-block; }
+
+  @media (max-width: 760px) {
+    .dindex { margin: -16px 16px 32px; }
+    .year { grid-template-columns: 32px minmax(0, 1fr); }
+    .graph { --cell: 10px; gap: 2px; }
+  }
+</style>

@@ -3,6 +3,7 @@
 import Base from '../layouts/Base.astro';
 import Lyric from '../components/Lyric.astro';
 import PhotoGrid from '../components/PhotoGrid.astro';
+import DateIndex from '../components/DateIndex.astro';
 import { getRolls } from '../lib/rolls';
 import { t, href, formatDate, type Lang } from '../lib/i18n';
 
@@ -32,8 +33,10 @@ const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '
       ))}
     </div>
 
+    <DateIndex rolls={rolls} lang={lang} />
+
     {rolls.map((r, i) => (
-      <section class="roll" data-kind={r.kind}>
+      <section class="roll" id={`roll-${r.id}`} data-kind={r.kind}>
         <div class="grid-col">
           <PhotoGrid
             photos={r.photos}
@@ -67,8 +70,37 @@ const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '
       document.querySelectorAll<HTMLElement>('.roll').forEach((s) => {
         s.hidden = !s.querySelector('.pg li:not([hidden])');
       });
+      // 인덱스: 걸러진 롤만 남은 날은 흐리게
+      cells.forEach((c) => {
+        const ids = c.dataset.rolls!.split(' ');
+        const shown = ids.filter((id) => !document.getElementById(`roll-${id}`)?.hidden);
+        c.classList.toggle('off', shown.length === 0);
+        if (shown.length) c.setAttribute('href', `#roll-${shown[0]}`);
+      });
     }),
   );
+
+  // 인덱스: 지금 보고 있는 롤의 칸에 테두리
+  const cells = document.querySelectorAll<HTMLAnchorElement>('.dindex a.c[data-rolls]');
+  const cellOf = new Map<string, HTMLAnchorElement>();
+  cells.forEach((c) => c.dataset.rolls!.split(' ').forEach((id) => cellOf.set(id, c)));
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        cells.forEach((c) => c.classList.remove('here'));
+        cellOf.get(e.target.id.replace(/^roll-/, ''))?.classList.add('here');
+      }
+    },
+    { rootMargin: '-8% 0px -88% 0px' },
+  );
+  document.querySelectorAll('.roll').forEach((s) => io.observe(s));
+
+  // 좁은 화면에선 최근 칸이 보이게 오른쪽 끝 쪽으로
+  document.querySelectorAll<HTMLElement>('.dindex .scroll').forEach((s) => {
+    const last = [...s.querySelectorAll<HTMLElement>('a.c')].pop();
+    if (last && s.scrollWidth > s.clientWidth) s.scrollLeft = Math.max(0, last.offsetLeft - s.clientWidth + 48);
+  });
 </script>
 
 <style>
@@ -76,6 +108,7 @@ const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '
   .top-tabs { border-top: 1px solid var(--rule); margin-bottom: 36px; }
   .roll { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: clamp(20px, 4vw, 48px); margin-bottom: clamp(56px, 8vw, 96px); }
   .roll[hidden] { display: none; }
+  .roll { scroll-margin-top: 24px; }
   .side { position: sticky; top: 32px; align-self: start; display: flex; justify-content: flex-start; }
   .go { display: inline-block; margin-top: 10px; text-decoration: none; color: var(--mute); }
   .go:hover { color: var(--ink); }
