@@ -18,8 +18,9 @@ const counts = {
   diving: all.filter((x) => x.r.kind === 'dive').length,
   daily: all.filter((x) => x.r.kind === 'daily').length,
   me: all.filter((x) => x.p.isMe).length,
+  byMe: all.filter((x) => x.p.isByMe).length,
 };
-const filters = (['all', 'picks', 'diving', 'daily', 'me'] as const).filter((k) => k === 'all' || counts[k] > 0);
+const filters = (['all', 'picks', 'diving', 'daily', 'me', 'byMe'] as const).filter((k) => k === 'all' || counts[k] > 0);
 const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '전체' : 'All') : t(lang, k));
 ---
 
@@ -61,6 +62,7 @@ const label = (k: (typeof filters)[number]) => (k === 'all' ? (lang === 'ko' ? '
     f === 'all' ||
     (f === 'picks' && el.dataset.pick === '1') ||
     (f === 'me' && el.dataset.me === '1') ||
+    (f === 'byMe' && el.dataset.byme === '1') ||
     el.dataset.kind === f;
   tabs.forEach((tab) =>
     tab.addEventListener('click', () => {

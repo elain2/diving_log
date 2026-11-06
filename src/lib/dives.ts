@@ -30,6 +30,8 @@ export interface Photo {
   isMe: boolean;
   /** 파일 이름에 -pick : 고른 컷 (사진 페이지에 빨간 동그라미) */
   isPick: boolean;
+  /** 내가 찍은 사진: 라이트룸에서 내보낸 YOUNG-…, 카메라 원본 KYG…, 또는 이름에 -byme */
+  isByMe: boolean;
 }
 
 export interface Dive {
@@ -60,7 +62,13 @@ const fileOf = (key: string) => key.split('/').pop()!;
 const tokensOf = (name: string) => name.replace(/\.[a-z0-9]+$/i, '').toLowerCase().split(/[-_ ]/);
 export function toPhoto(src: ImageMetadata, file: string): Photo {
   const tokens = tokensOf(file);
-  return { src, file, isMe: tokens.includes('me'), isPick: tokens.includes('pick') };
+  return {
+    src,
+    file,
+    isMe: tokens.includes('me'),
+    isPick: tokens.includes('pick'),
+    isByMe: /^(young|kyg)/i.test(file) || tokens.includes('byme'),
+  };
 }
 export const byName = (a: Photo, b: Photo) => natural(a.file, b.file);
 

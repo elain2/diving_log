@@ -21,7 +21,7 @@ const fullSrc = await Promise.all(
 ---
 <ul class:list={['grid3 pg', { center }]}>
   {photos.map((p, i) => (
-    <li class="rise" data-kind={kind} data-pick={p.isPick ? '1' : undefined} data-me={p.isMe ? '1' : undefined}>
+    <li class="rise" data-kind={kind} data-pick={p.isPick ? '1' : undefined} data-me={p.isMe ? '1' : undefined} data-byme={p.isByMe ? '1' : undefined}>
       <button
         type="button"
         class="tile"
