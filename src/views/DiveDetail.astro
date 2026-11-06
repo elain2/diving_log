@@ -41,7 +41,7 @@ const caption = [formatDate(d.date, lang, 'stamp'), dive.location].filter(Boolea
 
       {(dive.clips.length > 0 || d.youtube.length > 0) && (
         <section class="films" aria-label={t(lang, 'videos')}>
-          {dive.clips.map((src) => <video src={src} autoplay muted loop playsinline preload="metadata" aria-label={t(lang, 'moving')} />)}
+          {dive.clips.map((c) => <video src={c.src} poster={c.poster?.src} autoplay muted loop playsinline preload="metadata" aria-label={t(lang, 'moving')} />)}
           {d.youtube.map((id) => <YouTube id={id} label={dive.title} />)}
         </section>
       )}

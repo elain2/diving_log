@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import { makePoster } from './posters.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const args = process.argv.slice(2);
@@ -89,6 +90,16 @@ async function main() {
     if (!dry && (await tidyPhoto(p.file))) tidied++;
   }
   if (tidied) say(`📷 사진 ${tidied}장을 사이트용으로 줄이고 위치 정보를 지웠어요.`);
+
+  // 1-1. 썸네일 없는 영상에 하이라이트 썸네일 만들기
+  const clips = files.filter((f) => f.status !== ' D' && /^dives\/[^/]+\/clips\/[^/]+\.(mp4|mov|webm)$/i.test(f.file));
+  let posters = 0;
+  for (const c of clips) {
+    const jpg = path.join(ROOT, c.file.replace(/\.[^.]+$/, '.jpg'));
+    if (dry || (await fs.stat(jpg).catch(() => null))) continue;
+    if (await makePoster(path.join(ROOT, c.file)).catch(() => null)) posters++;
+  }
+  if (posters) say(`🖼  영상 ${posters}개에 썸네일을 만들었어요.`);
 
   // 2. 기록 파일 검사 (날짜 형식, 숫자 칸 등)
   say('🔎 기록 파일 확인 중…');

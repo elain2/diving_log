@@ -10,6 +10,7 @@
 // - 한 번 넣은 원본 파일은 기억해 두고(scripts/imported.json) 다시 넣지 않음.
 //   그래서 사이트에서 지우거나 다른 폴더로 옮긴 사진도 되살아나지 않음
 // - 영상(.mp4/.mov)은 ffmpeg가 있으면 720p 무음 루프 클립으로 줄여 clips/ 에 넣음
+//   하이라이트 장면은 썸네일(clips/<이름>.jpg)로 같이 만듦
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,6 +19,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import exifr from 'exifr';
+import { makePoster } from './posters.mjs';
 
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -161,6 +163,7 @@ async function addVideo(file, dir) {
       '-movflags', '+faststart', '-map_metadata', '-1', out,
     ]);
     console.log(`  🎞  ${path.basename(out)} (앞 ${CLIP_SECONDS}초, 무음 클립)`);
+    await makePoster(out).catch(() => {});
     console.log('     긴 영상은 유튜브(일부공개)에 올리고 index.md 의 youtube: 에 ID를 적어주세요.');
     return true;
   }

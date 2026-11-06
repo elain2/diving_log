@@ -12,6 +12,16 @@ const clipFiles = import.meta.glob<string>('/dives/*/clips/*.{mp4,MP4,webm,mov,M
   query: '?url',
   import: 'default',
 });
+// 영상 썸네일: clips/<이름>.jpg (npm run posters 가 하이라이트 장면으로 만듦)
+const posterFiles = import.meta.glob<ImageMetadata>('/dives/*/clips/*.{jpg,jpeg,JPG,JPEG}', {
+  eager: true,
+  import: 'default',
+});
+
+export interface Clip {
+  src: string;
+  poster?: ImageMetadata;
+}
 
 export interface Photo {
   src: ImageMetadata;
@@ -33,7 +43,9 @@ export interface Dive {
   /** 글을 렌더링할 항목 (영어 글이 있으면 영어) */
   bodyEntry: CollectionEntry<'dives'> | CollectionEntry<'divesEn'>;
   photos: Photo[];
-  clips: string[];
+  clips: Clip[];
+  /** 사진이 없을 때 대신 쓸 첫 영상 썸네일 */
+  poster?: ImageMetadata;
   cover?: Photo;
   /** 대표 사진 파일 경로 (강조색 뽑을 때 씀) */
   coverPath?: string;
@@ -63,7 +75,7 @@ function clipsFor(id: string) {
   return Object.entries(clipFiles)
     .filter(([k]) => folderOf(k) === id)
     .sort(([a], [b]) => natural(a, b))
-    .map(([, url]) => url);
+    .map(([k, src]) => ({ src, poster: posterFiles[k.replace(/\.[^.]+$/, '.jpg')] }));
 }
 
 let cache: Promise<{ entries: CollectionEntry<'dives'>[]; en: Map<string, CollectionEntry<'divesEn'>> }>;
@@ -87,6 +99,7 @@ export async function getDives(lang: Lang): Promise<Dive[]> {
       const location = english?.data.location ?? d.location;
       const fallback = t(lang, d.place === 'pool' ? 'untitledPool' : 'untitledSea');
       const cover = photos.find((p) => p.file === d.cover) ?? photos[0];
+      const clips = clipsFor(entry.id);
       return {
         id: entry.id,
         no: i + 1,
@@ -97,7 +110,8 @@ export async function getDives(lang: Lang): Promise<Dive[]> {
         buddy: english?.data.buddy ?? d.buddy,
         bodyEntry: english?.body?.trim() ? english : entry,
         photos,
-        clips: clipsFor(entry.id),
+        clips,
+        poster: clips.find((c) => c.poster)?.poster,
         cover,
         coverPath: cover ? `dives/${entry.id}/photos/${cover.file}` : undefined,
         deck: english?.data.deck ?? d.deck,
