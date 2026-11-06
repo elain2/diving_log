@@ -43,6 +43,11 @@ const monthName = (m: number) =>
 const weekday = ko ? ['', '월', '', '수', '', '금', ''] : ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 const cellLabel = (c: { date: Date; rolls: Roll[] }) =>
   [formatDate(c.date, lang, 'stamp'), ...c.rolls.map((r) => `${r.title} · ${r.photos.length}${ko ? '장' : ' photos'}`)].join(' — ');
+// 말풍선: 날짜(요일까지) + 롤마다 한 줄
+const tipDate = (d: Date) =>
+  `${formatDate(d, lang)} ${d.toLocaleDateString(ko ? 'ko-KR' : 'en-US', { weekday: ko ? 'long' : 'short', timeZone: 'UTC' })}`;
+const tipLines = (rolls: Roll[]) =>
+  rolls.map((r) => `${t(lang, r.kind === 'dive' ? 'diving' : 'daily')}|${r.title}|${r.photos.length}${ko ? '장' : ''}`).join('\n');
 ---
 
 <nav class="dindex" aria-label={ko ? '날짜로 이동' : 'Jump to a date'}>
@@ -71,7 +76,8 @@ const cellLabel = (c: { date: Date; rolls: Roll[] }) =>
                   data-kind={kind}
                   data-lv={level(n)}
                   data-rolls={c.rolls.map((r) => r.id).join(' ')}
-                  title={cellLabel(c)}
+                  data-tip-date={tipDate(c.date)}
+                  data-tip={tipLines(c.rolls)}
                   aria-label={cellLabel(c)}
                 ></a>
               );
@@ -86,7 +92,54 @@ const cellLabel = (c: { date: Date; rolls: Roll[] }) =>
     <span><i class="c on" data-kind="daily" data-lv="3"></i>{t(lang, 'daily')}</span>
     <span class="scale">{ko ? '적게' : 'Less'}{[1, 2, 3, 4].map((l) => <i class="c on" data-kind="dive" data-lv={l}></i>)}{ko ? '많이' : 'More'}</span>
   </p>
+  <div class="tip" role="tooltip" hidden></div>
 </nav>
+
+<script>
+  // 칸에 마우스를 올리거나 키보드로 고르면 말풍선
+  const tip = document.querySelector<HTMLElement>('.dindex .tip');
+  const show = (cell: HTMLElement) => {
+    if (!tip || !cell.dataset.tip) return;
+    tip.replaceChildren();
+    const date = document.createElement('p');
+    date.className = 'tip-date';
+    date.textContent = cell.dataset.tipDate ?? '';
+    tip.append(date);
+    for (const line of cell.dataset.tip.split('\n')) {
+      const [kind, title, n] = line.split('|');
+      const row = document.createElement('p');
+      row.className = 'tip-row';
+      row.dataset.kind = kind;
+      const b = document.createElement('b');
+      b.textContent = title;
+      const meta = document.createElement('span');
+      meta.textContent = `${kind} · ${n}`;
+      row.append(b, meta);
+      tip.append(row);
+    }
+    tip.hidden = false;
+    const r = cell.getBoundingClientRect();
+    const w = tip.offsetWidth;
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
+    const above = r.top - tip.offsetHeight - 8;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${above > 8 ? above : r.bottom + 8}px`;
+    tip.style.setProperty('--arrow', `${r.left + r.width / 2 - left}px`);
+    tip.classList.toggle('below', above <= 8);
+  };
+  const hide = () => tip && (tip.hidden = true);
+  // 키보드로 고른 칸은 포커스 때문에 스크롤돼도 말풍선을 따라 옮김
+  let focused: HTMLElement | null = null;
+  const onScroll = () => (focused ? show(focused) : hide());
+  document.querySelectorAll<HTMLElement>('.dindex a.c[data-tip]').forEach((c) => {
+    c.addEventListener('pointerenter', () => show(c));
+    c.addEventListener('pointerleave', () => (focused ? show(focused) : hide()));
+    c.addEventListener('focus', () => { focused = c; show(c); });
+    c.addEventListener('blur', () => { focused = null; hide(); });
+  });
+  addEventListener('scroll', onScroll, { passive: true });
+  document.querySelectorAll('.dindex .scroll').forEach((s) => s.addEventListener('scroll', onScroll, { passive: true }));
+</script>
 
 <style>
   .dindex { margin: -12px 0 40px; }
@@ -118,6 +171,26 @@ const cellLabel = (c: { date: Date; rolls: Roll[] }) =>
   a.c.on:hover { transform: scale(1.35); }
   a.c.on.here { outline-color: var(--ink); }
   a.c.on.off { opacity: 0.15; pointer-events: none; }
+
+  .tip {
+    position: fixed; z-index: 20; pointer-events: none;
+    max-width: min(280px, calc(100vw - 16px));
+    padding: 8px 11px; border-radius: 6px;
+    background: var(--ink); color: var(--paper);
+    font-size: 0.72rem; line-height: 1.5; letter-spacing: 0.02em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  }
+  .tip[hidden] { display: none; }
+  .tip::after {
+    content: ''; position: absolute; top: 100%; left: var(--arrow, 50%);
+    translate: -50% 0; border: 5px solid transparent; border-top-color: var(--ink);
+  }
+  .tip.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: var(--ink); }
+  .tip :global(p) { margin: 0; }
+  .tip :global(.tip-date) { opacity: 0.7; margin-bottom: 2px; }
+  .tip :global(.tip-row) { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+  .tip :global(.tip-row b) { font-weight: 700; }
+  .tip :global(.tip-row span) { opacity: 0.7; white-space: nowrap; font-size: 0.66rem; }
 
   .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: flex-end; margin: 6px 0 0; font-size: 0.66rem; }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
