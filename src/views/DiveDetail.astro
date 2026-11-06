@@ -83,8 +83,9 @@ const caption = [formatDate(d.date, lang, 'stamp'), dive.location].filter(Boolea
   .dot { margin: 0 8px; color: var(--mute); }
   .draft { color: var(--teal); }
 
-  .films { display: grid; gap: var(--gap); margin-bottom: var(--gap); }
-  .films video { width: 100%; background: #000; }
+  /* 세로 영상은 높이를 제한해서 나란히, 가로 영상은 폭에 맞게 */
+  .films { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); margin-bottom: var(--gap); }
+  .films video { width: auto; max-width: 100%; height: auto; max-height: min(72vh, 600px); background: #000; }
 
   .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule); }
   .pager a { text-decoration: none; }
