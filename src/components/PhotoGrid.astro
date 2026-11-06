@@ -11,13 +11,15 @@ interface Props {
   /** 필터용 표시 (사진 페이지) */
   kind?: 'diving' | 'daily';
   eagerCount?: number;
+  /** 마지막 줄이 덜 찼을 때 가운데로 (다이빙 기록 페이지) */
+  center?: boolean;
 }
-const { photos, title, caption, kind, eagerCount = 0 } = Astro.props;
+const { photos, title, caption, kind, eagerCount = 0, center = false } = Astro.props;
 const fullSrc = await Promise.all(
   photos.map(async (p) => (await getImage({ src: p.src, width: Math.min(1800, p.src.width), format: 'webp', quality: 82 })).src),
 );
 ---
-<ul class="grid3 pg">
+<ul class:list={['grid3 pg', { center }]}>
   {photos.map((p, i) => (
     <li class="rise" data-kind={kind} data-pick={p.isPick ? '1' : undefined} data-me={p.isMe ? '1' : undefined}>
       <button
@@ -36,6 +38,9 @@ const fullSrc = await Promise.all(
 <style>
   .pg { list-style: none; margin: 0; padding: 0; }
   .pg li[hidden] { display: none; }
+  /* 칸 크기는 3열 그대로, 남는 칸만 양옆으로 나눔 */
+  .pg.center { display: flex; flex-wrap: wrap; justify-content: center; }
+  .pg.center li { width: calc((100% - 2 * var(--gap)) / 3); }
   .pg .tile { width: 100%; cursor: zoom-in; }
   .pick { position: absolute; top: 8px; right: 10px; color: #fff; font-size: 0.9rem; text-shadow: 0 0 4px rgba(0,0,0,.5); }
 </style>

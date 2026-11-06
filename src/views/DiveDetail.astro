@@ -47,7 +47,7 @@ const caption = [formatDate(d.date, lang, 'stamp'), dive.location].filter(Boolea
         </section>
       )}
 
-      <PhotoGrid photos={dive.photos} title={dive.title} caption={caption} eagerCount={6} />
+      <PhotoGrid photos={dive.photos} title={dive.title} caption={caption} eagerCount={6} center />
 
       <nav class="pager small" aria-label="dives">
         {prev ? <a href={href(lang, `dives/${prev.id}`)}>‹ <span class="mincho">{prev.title}</span> <span class="mute">{formatDate(prev.data.date, lang, 'stamp')}</span></a> : <span />}
